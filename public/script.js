@@ -360,8 +360,8 @@ function showFeatures() {
 let isChatOpen = false;
 window.toggleChat = function() {
     isChatOpen = !isChatOpen;
-    document.getElementById('chatInputWrapper').style.display = isChatOpen ? 'block' : 'none';
-    document.getElementById('chatToggleBtn').style.background = isChatOpen ? 'rgba(229, 9, 20, 0.8)' : 'rgba(255,255,255,0.15)';
+    document.getElementById('chatInputWrapper').style.display = isChatOpen ? 'flex' : 'none';
+    document.getElementById('chatToggleBtn').style.background = isChatOpen ? 'rgba(229, 9, 20, 0.8)' : 'rgba(20,20,20,0.8)';
     if(isChatOpen) document.getElementById('chatInput').focus();
 };
 
