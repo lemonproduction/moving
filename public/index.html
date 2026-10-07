@@ -5,64 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>프라이빗 영화관</title>
     <style>
+
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0a0a0a; color: #fff; margin: 0; padding: 0; overflow: hidden; width: 100vw; height: 100dvh; display: flex; flex-direction: column; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; }
         
         /* 로비 화면 */
-        #lobbyContainer { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); }
+        #lobbyContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); z-index: 100; }
         h1 { margin: 0 0 10px 0; font-size: 2.2em; letter-spacing: -1px; }
         p { color: #888; margin-top: 0; font-size: 1em; margin-bottom: 30px; }
         .controls { padding: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 15px; max-width: 350px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        input { padding: 8px 12px; font-size: 16px; border-radius: 8px; border: 1px solid #333; background-color: rgba(0,0,0,0.5); color: #fff; width: 100%; outline: none; }
+        input { padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #333; background-color: rgba(0,0,0,0.5); color: #fff; width: 100%; outline: none; }
         button { padding: 14px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
         #hostBtn { background-color: #E50914; color: white; }
         #joinBtn { background-color: #333; color: white; }
         .warning { color: #ff9800; font-size: 0.85em; margin-top: 5px; line-height: 1.4; }
 
-        /* 극장 화면 (Flex 플로우 적용) */
-        #theaterContainer { flex-grow: 1; display: none; flex-direction: column; background-color: #000; width: 100%; height: 100%; }
+        /* 극장 화면 (절대 위치 레이아웃으로 키보드 방어) */
+        #theaterContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; background: #000; }
         
-        /* 1. 상단: 화상캠 가로 배치 (최대한 크게) */
-        #camArea { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: center; gap: 15px; padding: max(20px, env(safe-area-inset-top)) 15px 15px 15px; background: linear-gradient(rgba(0,0,0,0.8), transparent); z-index: 30; pointer-events: none; }
-        .cam-box { pointer-events: auto; flex: 1; max-width: 250px; aspect-ratio: 4/3; background-color: #111; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.15); box-shadow: 0 8px 24px rgba(0,0,0,0.8); }
+        /* 1. 영상 컨테이너 (항상 화면 꽉 차게, 비율 유지) */
+        #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1; }
+        #videoPlayer { width: 100%; height: 100%; object-fit: contain; }
+
+        /* 2. 웹캠 (작고 예쁘게 우측 상단 고정) */
+        #camArea { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; display: flex; gap: 10px; z-index: 20; pointer-events: none; }
+        .cam-box { width: 120px; aspect-ratio: 4/3; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: auto; }
         .cam-box video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-
-        /* 2. 중앙: 메인 영화 화면 */
-        #videoContainer { flex-grow: 1; width: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #videoPlayer { width: 100%; height: 100%; object-fit: contain; outline: none; }
         
-        #reactionContainer { position: absolute; bottom: 0; right: 10%; width: 60px; height: 100%; pointer-events: none; z-index: 50; }
-        .reaction-bubble { position: absolute; font-size: 2.5em; bottom: 0; opacity: 1; animation: floatUp 3s ease-out forwards; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
-        @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 10% { transform: translateY(-30px) scale(1.2); opacity: 1; } 100% { transform: translateY(-80vh) scale(1); opacity: 0; } }
-        #laserPointer { position: absolute; width: 12px; height: 12px; background-color: #E50914; border-radius: 50%; box-shadow: 0 0 15px #E50914, 0 0 5px #fff; pointer-events: none; display: none; z-index: 100; transition: top 0.05s, left 0.05s; }
+        /* 모바일에서 웹캠 크기 축소 */
+        @media (max-width: 600px) {
+            #camArea { right: 10px; top: max(10px, env(safe-area-inset-top)); }
+            .cam-box { width: 80px; border-radius: 6px; }
+        }
 
-        /* 3. 하단: 채팅 및 툴바 영역 */
-        #bottomArea { width: 100%; display: flex; flex-direction: column; align-items: center; padding: 10px; padding-bottom: max(25px, env(safe-area-inset-bottom)); z-index: 40; background: linear-gradient(transparent, rgba(0,0,0,0.9)); }
+        /* 3. 티커(자막) 컨테이너 */
+        #tickerContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; overflow: hidden; }
+
+        /* 4. 하단 UI (툴바 및 채팅창) - 바닥에 고정 */
+        #bottomArea { position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 30; pointer-events: none; }
         
-        /* 채팅창 - 높이를 대폭 줄이고 툴바 위에 배치 */
-        #chatBox { width: 95%; max-width: 420px; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); border-radius: 16px; padding: 8px 12px; display: none; flex-direction: column; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); }
-        #chatMessages { height: 110px; /* 영화 가림을 최소화하는 높이 */ overflow-y: auto; text-align: left; font-size: 0.9em; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
-        .chat-msg { background: rgba(255,255,255,0.15); padding: 6px 10px; border-radius: 10px; word-break: break-all; max-width: 85%; }
-        .chat-me { background: rgba(229, 9, 20, 0.4); align-self: flex-end; border-bottom-right-radius: 2px; }
-        .chat-you { align-self: flex-start; border-bottom-left-radius: 2px; }
-        .chat-input-row { display: flex; gap: 8px; }
-        .chat-input-row input { flex-grow: 1; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); font-size: 14px; }
-        .chat-input-row button { padding: 8px 15px; border-radius: 8px; background: #fff; color: #000; font-weight: bold; }
+        /* 클릭이 필요한 요소들만 이벤트를 받도록 설정 */
+        #theaterToolbar, #chatInputWrapper { pointer-events: auto; }
 
-        /* 하단 툴바 */
-        #theaterToolbar { width: 95%; max-width: 420px; display: flex; align-items: center; justify-content: space-evenly; background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(15px); border-radius: 40px; border: 1px solid rgba(255,255,255,0.15); padding: 8px; margin-bottom: env(safe-area-inset-bottom); }
-        .toolbar-btn { background: none; border: none; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 1.4em; color: white; cursor: pointer; transition: background 0.2s; padding: 0; margin: 0; }
+        /* 채팅 입력창 */
+        #chatInputWrapper { width: 90%; max-width: 400px; display: none; background: rgba(0,0,0,0.7); backdrop-filter: blur(15px); border-radius: 20px; padding: 10px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .chat-inner { display: flex; gap: 8px; }
+        #chatInput { flex-grow: 1; padding: 10px 15px; border-radius: 15px; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 14px; outline: none; }
+        #chatInput::placeholder { color: #aaa; }
+        #chatBtn { padding: 10px 18px; border-radius: 15px; background: #E50914; color: white; font-weight: bold; border: none; font-size: 14px; }
+
+        /* 툴바 */
+        #theaterToolbar { display: flex; align-items: center; gap: 5px; background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(15px); border-radius: 40px; border: 1px solid rgba(255,255,255,0.15); padding: 8px 15px; }
+        .toolbar-btn { background: none; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.4em; color: white; cursor: pointer; }
         .toolbar-btn:active { background: rgba(255,255,255,0.2); transform: scale(1.1); }
-        .separator { width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 5px; }
-        .vol-control { display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+        .separator { width: 1px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 5px; }
+        
+        /* 오디오 증폭 슬라이더 */
+        .vol-control { display: flex; align-items: center; gap: 6px; padding-left: 5px; }
         .vol-control span.icon { font-size: 1.2em; }
-        .vol-control input[type=range] { width: 70px; height: 4px; padding: 0; background: rgba(255,255,255,0.3); border: none; border-radius: 2px; }
+        .vol-control input[type=range] { width: 60px; height: 4px; }
         .vol-control span.val { font-size: 0.75em; color: #ddd; width: 22px; text-align: right; }
 
-        /* 대형 SOS 팝업 */
-        #sosOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
+        /* 리액션 및 SOS */
+        #reactionContainer { position: absolute; bottom: 80px; right: 20px; width: 60px; height: 100%; pointer-events: none; z-index: 50; }
+        .reaction-bubble { position: absolute; font-size: 2.2em; bottom: -50px; opacity: 1; animation: floatUp 3s ease-out forwards; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
+        @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 10% { transform: translateY(-30px) scale(1.2); opacity: 1; } 100% { transform: translateY(-80vh) scale(1); opacity: 0; } }
+        
+        #laserPointer { position: absolute; width: 12px; height: 12px; background-color: #E50914; border-radius: 50%; box-shadow: 0 0 15px #E50914, 0 0 5px #fff; pointer-events: none; display: none; z-index: 100; transition: top 0.05s, left 0.05s; }
+        
+        #sosOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: auto; }
         #sosOverlay h1 { font-size: 2.5em; color: #E50914; margin-bottom: 10px; }
-        #sosOverlay p { font-size: 1.1em; color: #ddd; padding: 0 20px; }
+        #sosOverlay p { font-size: 1.1em; color: #ddd; }
+        #sosOverlay button { margin-top: 20px; background: #E50914; padding: 12px 30px; font-size: 1.1em; border-radius: 8px; border: none; color: white; cursor: pointer; }
+
     </style>
 </head>
 <body>
@@ -94,10 +109,10 @@
 
         <!-- 3. 채팅 & 툴바 (하단) -->
         <div id="bottomArea">
-            <div id="chatInputWrapper" style="display:none; width: 95%; max-width: 420px; margin-bottom: 15px; z-index: 50;">
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="chatInput" placeholder="메시지를 입력하면 화면을 지나갑니다..." style="flex-grow: 1; padding: 8px 12px; border-radius: 20px; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.3); font-size: 12px; color: white; outline: none; backdrop-filter: blur(10px);" onkeypress="if(event.key==='Enter') sendChat()">
-                    <button onclick="sendChat()" style="padding: 8px 15px; border-radius: 20px; background: #E50914; color: #fff; font-size: 12px; font-weight: bold; border: none;">전송</button>
+            <div id="chatInputWrapper">
+                <div class="chat-inner">
+                    <input type="text" id="chatInput" placeholder="메시지를 입력하면 화면을 지나갑니다..." onkeypress="if(event.key==='Enter') sendChat()">
+                    <button id="chatBtn" onclick="sendChat()">전송</button>
                 </div>
             </div>
             
@@ -128,6 +143,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=9"></script>
+    <script src="script.js?v=10"></script>
 </body>
 </html>
