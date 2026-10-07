@@ -259,10 +259,6 @@ function disableInputs() {
 // 추가 기능 구현 (채팅, 이모티콘, SOS, 레이저, 시네마 모드)
 // ==========================================
 
-function showFeatures() {
-    document.getElementById('featureBar').style.display = 'flex';
-    document.getElementById('chatBox').style.display = 'flex';
-}
 
 // 1. 소켓 이벤트 수신
 socket.on('room-event', (payload) => {
@@ -349,3 +345,19 @@ window.toggleCinemaMode = function() {
     // 버튼 텍스트 변경
     document.getElementById('cinemaBtn').innerText = isCinemaMode ? '🎬 조명 켜기' : '🎬 조명 끄기';
 };
+
+// 7. 모던 UI 컨트롤
+function showFeatures() {
+    document.getElementById('lobbyContainer').style.display = 'none';
+    document.getElementById('theaterContainer').style.display = 'block';
+}
+
+let isChatOpen = false;
+window.toggleChat = function() {
+    isChatOpen = !isChatOpen;
+    document.getElementById('chatBox').style.display = isChatOpen ? 'flex' : 'none';
+    document.getElementById('chatToggleBtn').style.background = isChatOpen ? 'rgba(229, 9, 20, 0.8)' : 'rgba(255,255,255,0.15)';
+};
+
+// 기존 showFeatures 함수 오버라이드
+window.showFeatures = showFeatures;
