@@ -1,3 +1,11 @@
+
+// [아이폰 키보드 방어] 키보드가 올라올 때 실제 화면(Visual Viewport) 높이에 맞게 영상 크기 강제 축소!
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+        document.body.style.height = window.visualViewport.height + 'px';
+        window.scrollTo(0, 0);
+    });
+}
 const socket = io();
 
 const hostBtn = document.getElementById('hostBtn');
@@ -317,7 +325,7 @@ function appendChatMessage(msg, isMe) {
     div.style.fontWeight = 'bold';
     div.style.color = isMe ? '#FFD700' : '#FFFFFF'; // 나는 노란색, 상대는 흰색
     div.style.textShadow = '2px 2px 8px #000, -2px -2px 8px #000';
-    div.style.top = (Math.random() * 60 + 15) + '%'; // 15% ~ 75% 사이에서 랜덤 출현 (겹침 방지)
+    div.style.top = (Math.random() * 30 + 15) + '%'; // 15%~45% 사이에서만 출현 (하단 짤림 완벽 방지)
     div.style.right = '-100%';
     div.style.transition = 'transform 8s linear';
     container.appendChild(div);
