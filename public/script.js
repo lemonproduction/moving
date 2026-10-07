@@ -295,7 +295,7 @@ function showReactionBubble(emoji) {
     setTimeout(() => bubble.remove(), 2500);
 }
 
-// 3. 실시간 채팅
+// 3. 실시간 틱톡(Ticker) 채팅
 window.sendChat = function() {
     const input = document.getElementById('chatInput');
     const msg = input.value.trim();
@@ -304,14 +304,29 @@ window.sendChat = function() {
     appendChatMessage(msg, true);
     socket.emit('room-event', { roomId, type: 'chat', data: msg });
     input.value = '';
+    toggleChat(); // 전송 후 자동 닫기
 };
 function appendChatMessage(msg, isMe) {
-    const box = document.getElementById('chatMessages');
+    const container = document.getElementById('tickerContainer');
+    if(!container) return;
     const div = document.createElement('div');
-    div.className = 'chat-msg ' + (isMe ? 'chat-me' : 'chat-you');
     div.innerText = msg;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
+    div.style.position = 'absolute';
+    div.style.whiteSpace = 'nowrap';
+    div.style.fontSize = isMe ? '1.8em' : '2em';
+    div.style.fontWeight = 'bold';
+    div.style.color = isMe ? '#ccc' : '#fff';
+    div.style.textShadow = '2px 2px 5px rgba(0,0,0,0.8), -1px -1px 3px rgba(0,0,0,0.8)';
+    div.style.top = (Math.random() * 80) + '%';
+    div.style.right = '-100%';
+    div.style.transition = 'transform 8s linear';
+    container.appendChild(div);
+    
+    // 강제 리플로우 후 이동 애니메이션
+    div.offsetWidth;
+    div.style.transform = 'translateX(-200vw)';
+    
+    setTimeout(() => div.remove(), 8000);
 }
 
 // 4. SOS 팝콘 타임
@@ -334,30 +349,18 @@ document.addEventListener('mousemove', (e) => {
     }
 });
 
-// 6. 시네마 모드 (UI 숨기기)
-let isCinemaMode = false;
-window.toggleCinemaMode = function() {
-    isCinemaMode = !isCinemaMode;
-    const display = isCinemaMode ? 'none' : '';
-    document.querySelector('.controls').style.display = display;
-    document.getElementById('chatBox').style.opacity = isCinemaMode ? '0.2' : '1';
-    
-    // 버튼 텍스트 변경
-    document.getElementById('cinemaBtn').innerText = isCinemaMode ? '🎬 조명 켜기' : '🎬 조명 끄기';
-};
-
-// 7. 모던 UI 컨트롤
+// 7. 모던 UI 컨트롤 (Flex 레이아웃 버그 수정)
 function showFeatures() {
     document.getElementById('lobbyContainer').style.display = 'none';
-    document.getElementById('theaterContainer').style.display = 'block';
+    document.getElementById('theaterContainer').style.display = 'flex'; // block 대신 flex 사용 필수!
 }
 
 let isChatOpen = false;
 window.toggleChat = function() {
     isChatOpen = !isChatOpen;
-    document.getElementById('chatBox').style.display = isChatOpen ? 'flex' : 'none';
+    document.getElementById('chatInputWrapper').style.display = isChatOpen ? 'block' : 'none';
     document.getElementById('chatToggleBtn').style.background = isChatOpen ? 'rgba(229, 9, 20, 0.8)' : 'rgba(255,255,255,0.15)';
+    if(isChatOpen) document.getElementById('chatInput').focus();
 };
 
-// 기존 showFeatures 함수 오버라이드
 window.showFeatures = showFeatures;
