@@ -10,71 +10,85 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; }
         
         /* 로비 화면 */
-        #lobbyContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); z-index: 100; }
-        h1 { margin: 0 0 10px 0; font-size: 2.2em; letter-spacing: -1px; }
+        #lobbyContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #111 0%, #000 100%); z-index: 100; }
+        h1 { margin: 0 0 10px 0; font-size: 2.2em; font-weight: 800; letter-spacing: -1px; background: linear-gradient(to right, #E50914, #ff5722); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         p { color: #888; margin-top: 0; font-size: 1em; margin-bottom: 30px; }
-        .controls { padding: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 15px; max-width: 350px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        input { padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #333; background-color: rgba(0,0,0,0.5); color: #fff; width: 100%; outline: none; }
-        button { padding: 14px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
-        #hostBtn { background-color: #E50914; color: white; }
-        #joinBtn { background-color: #333; color: white; }
-        .warning { color: #ff9800; font-size: 0.85em; margin-top: 5px; line-height: 1.4; }
+        .controls { padding: 30px; background: rgba(30, 30, 30, 0.6); border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; flex-direction: column; gap: 15px; max-width: 350px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.8); }
+        input { padding: 14px 18px; font-size: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background-color: rgba(0,0,0,0.5); color: #fff; width: 100%; outline: none; transition: border 0.3s; }
+        input:focus { border-color: #E50914; }
+        button { padding: 16px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 12px; font-weight: 700; transition: all 0.2s; }
+        #hostBtn { background: linear-gradient(135deg, #E50914, #B20710); color: white; box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4); }
+        #hostBtn:active { transform: scale(0.97); }
+        #joinBtn { background-color: rgba(255,255,255,0.1); color: white; }
+        #joinBtn:active { background-color: rgba(255,255,255,0.2); }
+        .warning { color: #ff9800; font-size: 0.8em; margin-top: 5px; opacity: 0.8; }
 
-        /* 극장 화면 (완전한 절대 위치 레이아웃) */
+        /* 극장 화면 */
         #theaterContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; background: #000; }
         
-        /* 1. 영상 컨테이너 (정중앙 꽉 차게) */
         #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1; }
         #videoPlayer { width: 100%; height: 100%; object-fit: contain; }
 
-        /* 2. 웹캠 (우측 상단) */
-        #camArea { position: absolute; top: max(10px, env(safe-area-inset-top)); right: 15px; display: flex; gap: 8px; z-index: 20; pointer-events: none; }
-        .cam-box { width: 120px; aspect-ratio: 4/3; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: auto; }
+        /* 부드러운 웹캠 UI */
+        #camArea { position: absolute; top: max(15px, env(safe-area-inset-top)); right: 15px; display: flex; gap: 10px; z-index: 20; pointer-events: none; }
+        .cam-box { width: 110px; aspect-ratio: 4/3; background: #111; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.6); pointer-events: auto; transition: transform 0.3s ease; }
+        .cam-box:hover { transform: scale(1.03); border: 1px solid rgba(255,255,255,0.3); }
         .cam-box video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-        /* 3. 우측 독립 채팅 섹션 (웹캠 바로 아래) */
-        #chatSection { position: absolute; top: max(110px, calc(env(safe-area-inset-top) + 100px)); right: 15px; display: flex; align-items: center; gap: 10px; z-index: 40; pointer-events: none; }
+        /* 고급스러운 우측 채팅 섹션 */
+        #chatSection { position: absolute; top: max(115px, calc(env(safe-area-inset-top) + 105px)); right: 15px; display: flex; align-items: center; gap: 10px; z-index: 40; pointer-events: none; }
         
-        #chatToggleBtn { width: 45px; height: 45px; border-radius: 50%; background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.2); font-size: 1.2em; color: white; cursor: pointer; backdrop-filter: blur(10px); pointer-events: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 0; }
+        #chatToggleBtn { width: 48px; height: 48px; border-radius: 50%; background: rgba(30,30,30,0.6); border: 1px solid rgba(255,255,255,0.08); color: white; cursor: pointer; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); pointer-events: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+        #chatToggleBtn:hover { background: rgba(60,60,60,0.8); transform: translateY(-2px); }
         #chatToggleBtn:active { transform: scale(0.95); }
         
-        #chatInputWrapper { display: none; background: rgba(0,0,0,0.8); border-radius: 25px; padding: 5px 5px 5px 15px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px); pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.6); align-items: center; }
-        #chatInput { background: transparent; border: none; color: white; outline: none; width: 160px; font-size: 14px; padding: 5px; }
-        #chatInput::placeholder { color: #888; }
-        #chatBtn { background: #E50914; color: white; border: none; border-radius: 20px; padding: 8px 15px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        #chatInputWrapper { display: none; background: rgba(20,20,20,0.7); border-radius: 24px; padding: 6px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.7); align-items: center; gap: 8px; }
+        #chatInput { background: transparent; border: none; color: white; outline: none; width: 180px; font-size: 15px; padding: 8px 12px; }
+        #chatInput::placeholder { color: #777; }
+        #chatBtn { background: #E50914; color: white; border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(229, 9, 20, 0.4); transition: transform 0.2s; }
+        #chatBtn:active { transform: scale(0.9); }
 
-        /* 4. 하단 프리미엄 콘솔 (넷플릭스 스타일) */
-        #bottomConsole { position: absolute; bottom: max(25px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; background: rgba(15, 15, 15, 0.85); backdrop-filter: blur(20px); padding: 8px 15px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 40; width: max-content; max-width: 95vw; gap: 8px; }
-        .console-group { display: flex; align-items: center; gap: 4px; }
-        .console-btn { background: none; border: none; font-size: 1.4em; color: white; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; transition: background 0.2s; display: flex; align-items: center; justify-content: center; padding: 0; }
-        .console-btn:active { background: rgba(255,255,255,0.2); }
-        .separator { width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 4px; }
+        /* 하단 프리미엄 넷플릭스 콘솔 (Glassmorphism) */
+        #bottomConsole { position: absolute; bottom: max(30px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; background: rgba(20, 20, 20, 0.6); backdrop-filter: blur(25px) saturate(150%); -webkit-backdrop-filter: blur(25px) saturate(150%); padding: 10px 18px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1); z-index: 40; width: max-content; max-width: 95vw; gap: 10px; }
+        .console-group { display: flex; align-items: center; gap: 6px; }
         
-        .vol-group { color: white; font-size: 1.1em; display: flex; align-items: center; }
-        .vol-group input[type=range] { width: 70px; accent-color: #E50914; margin: 0 8px; }
-        .vol-group #volLabel { font-size: 0.75em; width: 28px; color: #ccc; text-align: right; }
+        /* 리액션 버튼 호버 이펙트 */
+        .console-btn { background: rgba(255,255,255,0.03); border: 1px solid transparent; font-size: 1.4em; color: white; cursor: pointer; border-radius: 50%; width: 44px; height: 44px; transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); display: flex; align-items: center; justify-content: center; }
+        .console-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.15); border: 1px solid rgba(255,255,255,0.15); }
+        .console-btn:active { transform: scale(0.95); }
+        .console-btn.alert { color: #fff; }
+        .console-btn.alert:hover { background: rgba(229, 9, 20, 0.2); border-color: rgba(229, 9, 20, 0.5); }
+        
+        .separator { width: 1px; height: 28px; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.15), rgba(255,255,255,0)); margin: 0 4px; }
+        
+        /* 커스텀 프리미엄 슬라이더 */
+        .vol-group { color: white; display: flex; align-items: center; gap: 6px; margin-left: 2px; }
+        .vol-group input[type=range] { -webkit-appearance: none; width: 80px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); outline: none; margin: 0 6px; }
+        .vol-group input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s; }
+        .vol-group input[type=range]::-webkit-slider-thumb:active { transform: scale(1.3); }
+        .vol-group #volLabel { font-size: 0.85em; font-weight: 500; width: 32px; color: #eee; text-align: right; font-variant-numeric: tabular-nums; }
 
-        /* 티커 자막 */
         #tickerContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
-
-        /* 리액션 / SOS 팝업 */
-        #reactionContainer { position: absolute; bottom: 80px; right: 20px; width: 60px; height: 100%; pointer-events: none; z-index: 50; }
-        .reaction-bubble { position: absolute; font-size: 2.2em; bottom: -50px; opacity: 1; animation: floatUp 3s ease-out forwards; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
+        #reactionContainer { position: absolute; bottom: 100px; right: 30px; width: 60px; height: 100%; pointer-events: none; z-index: 50; }
+        .reaction-bubble { position: absolute; font-size: 2.2em; bottom: -50px; opacity: 1; animation: floatUp 3s ease-out forwards; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); }
         @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 10% { transform: translateY(-30px) scale(1.2); opacity: 1; } 100% { transform: translateY(-80vh) scale(1); opacity: 0; } }
         
-        #sosOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: auto; }
-        #sosOverlay h1 { font-size: 2.5em; color: #E50914; margin-bottom: 10px; }
+        #sosOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: auto; }
+        #sosOverlay h1 { font-size: 2.8em; color: #E50914; margin-bottom: 10px; font-weight: 800; letter-spacing: -1px; }
         #sosOverlay p { font-size: 1.1em; color: #ddd; }
-        #sosOverlay button { margin-top: 20px; background: #E50914; padding: 12px 30px; font-size: 1.1em; border-radius: 8px; border: none; color: white; cursor: pointer; }
+        #sosOverlay button { margin-top: 25px; background: #fff; color: #000; padding: 14px 35px; font-size: 1.1em; border-radius: 30px; border: none; cursor: pointer; font-weight: 700; transition: transform 0.2s; }
+        #sosOverlay button:active { transform: scale(0.95); }
         
         /* 모바일 세부 조정 */
         @media (max-width: 600px) {
-            .cam-box { width: 32vw; max-width: 130px; } /* 폰에서 너무 크지 않게 적절히 조절 */
+            .cam-box { width: 32vw; max-width: 120px; border-radius: 12px; } 
             #chatSection { top: max(100px, calc(env(safe-area-inset-top) + 90px)); right: 10px; }
-            #chatInput { width: 130px; } /* 모바일에서 채팅 입력창 살짝 줄임 */
-            #bottomConsole { padding: 6px 10px; gap: 4px; }
-            .console-btn { width: 36px; height: 36px; font-size: 1.3em; }
-            .vol-group input[type=range] { width: 50px; }
+            #chatToggleBtn { width: 42px; height: 42px; }
+            #chatInput { width: 140px; font-size: 14px; }
+            #bottomConsole { padding: 8px 12px; border-radius: 40px; }
+            .console-btn { width: 38px; height: 38px; font-size: 1.3em; }
+            .vol-group input[type=range] { width: 60px; }
+            .vol-group #volLabel { font-size: 0.8em; width: 28px; }
         }
 
     </style>
@@ -108,9 +122,9 @@
         <div id="chatSection">
             <div id="chatInputWrapper">
                 <input type="text" id="chatInput" placeholder="메시지 입력..." onkeypress="if(event.key==='Enter') sendChat()">
-                <button id="chatBtn" onclick="sendChat()">전송</button>
+                <button id="chatBtn" onclick="sendChat()"><svg viewBox="0 0 24 24" width="18" height="18" fill="white" transform="rotate(-90)"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
             </div>
-            <button id="chatToggleBtn" onclick="toggleChat()">💬</button>
+            <button id="chatToggleBtn" onclick="toggleChat()"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></button>
         </div>
 
         <!-- 4. 넷플릭스 스타일 하단 콘솔 -->
@@ -122,11 +136,11 @@
             </div>
             <div class="separator"></div>
             <div class="console-group">
-                <button class="console-btn alert" onclick="sendSOS()">⏸️</button>
+                <button class="console-btn alert" onclick="sendSOS()"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
             </div>
             <div class="separator"></div>
             <div class="console-group vol-group">
-                <span>🎤</span>
+                <span style="display:flex; color:#ccc;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></span>
                 <input type="range" id="voiceVol" min="1" max="5" step="0.5" value="1" oninput="changeVol(this.value)">
                 <span id="volLabel">1x</span>
             </div>
@@ -147,6 +161,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=17"></script>
+    <script src="script.js?v=18"></script>
 </body>
 </html>
