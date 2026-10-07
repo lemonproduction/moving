@@ -29,6 +29,11 @@ io.on('connection', (socket) => {
         });
     });
 
+    // 채팅, 이모티콘, 레이저, SOS 등을 위한 통합 이벤트 릴레이
+    socket.on('room-event', (payload) => {
+        socket.to(payload.roomId).emit('room-event', payload);
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });

@@ -22,36 +22,45 @@ let isHost = false;
 let remoteAudioCtx;
 let remoteGainNode;
 
-if (voiceVolInput) {
-    voiceVolInput.addEventListener('input', (e) => {
-        const val = e.target.value;
-        volLabel.innerText = `${val}x ${val == 1 ? '(기본)' : ''}`;
-        if (remoteGainNode) {
-            remoteGainNode.gain.value = val;
-        }
-    });
-}
-
-function applyAudioBooster(stream) {
+function initAudioBooster() {
     if (!remoteAudioCtx) {
+        // 반드시 유저 클릭 이벤트 안에서 최초 생성해야 iOS에서 막히지 않음
         remoteAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
         remoteGainNode = remoteAudioCtx.createGain();
         remoteGainNode.connect(remoteAudioCtx.destination);
-        // 슬라이더 초기값 적용
-        if (voiceVolInput) remoteGainNode.gain.value = voiceVolInput.value;
+        
+        const voiceVolInput = document.getElementById('voiceVol');
+        const volLabel = document.getElementById('volLabel');
+        if (voiceVolInput) {
+            remoteGainNode.gain.value = voiceVolInput.value;
+            voiceVolInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                volLabel.innerText = `${val}x ${val == 1 ? '(기본)' : ''}`;
+                remoteGainNode.gain.value = val;
+            });
+        }
+        
+        // iOS Safari AudioContext Resume 처리
+        if (remoteAudioCtx.state === 'suspended') {
+            remoteAudioCtx.resume();
+        }
     }
+}
+
+function applyAudioBooster(stream) {
+    if (!remoteAudioCtx || !remoteGainNode) return;
+    
+    // 비디오 태그의 기존 오디오는 끄기(중복 소리 방지)
+    remoteCam.muted = true;
     
     if (!stream.boostConnected && stream.getAudioTracks().length > 0) {
         const source = remoteAudioCtx.createMediaStreamSource(stream);
         source.connect(remoteGainNode);
         stream.boostConnected = true;
     }
-    
-    // 원본 비디오 태그의 소리는 음소거(안 그러면 소리 2번 들림)
-    remoteCam.muted = true;
 }
 
-// STUN 서버 설정
+// 오디오 증폭기 전역 변수
 const configuration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -61,6 +70,7 @@ const configuration = {
 
 // 방 만들기 (호스트)
 hostBtn.addEventListener('click', async () => {
+    initAudioBooster();
     roomId = roomInput.value.trim();
     if (!roomId) return alert("방 이름을 입력하세요.");
 
@@ -87,7 +97,7 @@ hostBtn.addEventListener('click', async () => {
         socket.emit('join-room', roomId);
         
         statusDiv.innerText = `호스트 모드: [${roomId}] 방에 입장했습니다. 민지님을 기다리는 중...`;
-        disableInputs();
+        disableInputs(); showFeatures();
 
     } catch (err) {
         console.error("Error sharing media: ", err);
@@ -97,6 +107,7 @@ hostBtn.addEventListener('click', async () => {
 
 // 방 참여 (게스트)
 joinBtn.addEventListener('click', async () => {
+    initAudioBooster();
     roomId = roomInput.value.trim();
     if (!roomId) return alert("방 이름을 입력하세요.");
 
@@ -114,7 +125,7 @@ joinBtn.addEventListener('click', async () => {
         socket.emit('join-room', roomId);
         
         statusDiv.innerText = `게스트 모드: [${roomId}] 방에 입장했습니다. 연결 대기 중...`;
-        disableInputs();
+        disableInputs(); showFeatures();
     } catch(err) {
         console.error("Error accessing camera: ", err);
         alert("카메라/마이크 권한이 필요합니다.");
@@ -213,7 +224,7 @@ function createPeerConnection(targetUserId) {
         if (isHost) {
             // 호스트는 게스트의 웹캠 스트림만 받음
             if (remoteCam.srcObject !== stream) {
-                remoteCam.srcObject = stream;
+                remoteCam.srcObject = stream; applyAudioBooster(stream);
             }
         } else {
             // 게스트는 호스트로부터 영화와 웹캠 두 가지 스트림을 받음
@@ -224,7 +235,7 @@ function createPeerConnection(targetUserId) {
                 }
             } else {
                 if (remoteCam.srcObject !== stream) {
-                    remoteCam.srcObject = stream;
+                    remoteCam.srcObject = stream; applyAudioBooster(stream);
                 }
             }
         }
@@ -243,3 +254,98 @@ function disableInputs() {
     joinBtn.disabled = true;
     roomInput.disabled = true;
 }
+
+// ==========================================
+// 추가 기능 구현 (채팅, 이모티콘, SOS, 레이저, 시네마 모드)
+// ==========================================
+
+function showFeatures() {
+    document.getElementById('featureBar').style.display = 'flex';
+    document.getElementById('chatBox').style.display = 'flex';
+}
+
+// 1. 소켓 이벤트 수신
+socket.on('room-event', (payload) => {
+    if (payload.type === 'reaction') {
+        showReactionBubble(payload.data);
+    } else if (payload.type === 'chat') {
+        appendChatMessage(payload.data, false);
+    } else if (payload.type === 'sos') {
+        document.getElementById('sosOverlay').style.display = 'flex';
+    } else if (payload.type === 'laser') {
+        const laser = document.getElementById('laserPointer');
+        laser.style.display = 'block';
+        laser.style.left = (payload.data.x * window.innerWidth) + 'px';
+        laser.style.top = (payload.data.y * window.innerHeight) + 'px';
+        
+        clearTimeout(window.laserTimer);
+        window.laserTimer = setTimeout(() => { laser.style.display = 'none'; }, 2000);
+    }
+});
+
+// 2. 이모티콘 리액션
+window.sendReaction = function(emoji) {
+    if(!roomId) return;
+    showReactionBubble(emoji);
+    socket.emit('room-event', { roomId, type: 'reaction', data: emoji });
+};
+function showReactionBubble(emoji) {
+    const container = document.getElementById('reactionContainer');
+    const bubble = document.createElement('div');
+    bubble.className = 'reaction-bubble';
+    bubble.innerText = emoji;
+    bubble.style.left = Math.random() * 60 + 'px'; // 좌우 랜덤 위치
+    container.appendChild(bubble);
+    setTimeout(() => bubble.remove(), 2500);
+}
+
+// 3. 실시간 채팅
+window.sendChat = function() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg || !roomId) return;
+    
+    appendChatMessage(msg, true);
+    socket.emit('room-event', { roomId, type: 'chat', data: msg });
+    input.value = '';
+};
+function appendChatMessage(msg, isMe) {
+    const box = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + (isMe ? 'chat-me' : 'chat-you');
+    div.innerText = msg;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+// 4. SOS 팝콘 타임
+window.sendSOS = function() {
+    if(!roomId) return;
+    document.getElementById('sosOverlay').style.display = 'flex';
+    socket.emit('room-event', { roomId, type: 'sos' });
+};
+
+// 5. 레이저 포인터 (마우스 움직임)
+let lastSentTime = 0;
+document.addEventListener('mousemove', (e) => {
+    if (!roomId) return;
+    const now = Date.now();
+    if (now - lastSentTime > 50) { // 50ms 마다 전송 (트래픽 방지)
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        socket.emit('room-event', { roomId, type: 'laser', data: {x, y} });
+        lastSentTime = now;
+    }
+});
+
+// 6. 시네마 모드 (UI 숨기기)
+let isCinemaMode = false;
+window.toggleCinemaMode = function() {
+    isCinemaMode = !isCinemaMode;
+    const display = isCinemaMode ? 'none' : '';
+    document.querySelector('.controls').style.display = display;
+    document.getElementById('chatBox').style.opacity = isCinemaMode ? '0.2' : '1';
+    
+    // 버튼 텍스트 변경
+    document.getElementById('cinemaBtn').innerText = isCinemaMode ? '🎬 조명 켜기' : '🎬 조명 끄기';
+};

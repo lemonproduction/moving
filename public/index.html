@@ -31,6 +31,19 @@
         
         #status { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #4caf50; }
         .warning { color: #ff9800; font-size: 0.85em; margin-top: 10px; display: block; }
+        
+        /* 추가 기능 CSS */
+        .emoji-btn { font-size: 1.5em; padding: 5px 10px; background: rgba(0,0,0,0.6); border-radius: 20px; transition: transform 0.1s; }
+        .emoji-btn:active { transform: scale(1.2); }
+        .reaction-bubble { position: absolute; font-size: 2em; bottom: 0; opacity: 1; animation: floatUp 2.5s ease-out forwards; }
+        @keyframes floatUp { 
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-50px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-300px) scale(1); opacity: 0; }
+        }
+        .chat-msg { background: rgba(255,255,255,0.1); padding: 5px 8px; border-radius: 5px; word-break: break-all; }
+        .chat-me { color: #aaa; text-align: right; }
+        .chat-you { color: #fff; }
     </style>
 </head>
 <body>
@@ -45,7 +58,13 @@
             <button id="joinBtn">방 참여하기 (같이 보기)</button>
         </div>
         <div style="margin-top: 15px; background: #333; padding: 10px; border-radius: 5px; display: inline-block;">
-        <span class="warning">⚠️ 주의: 하드웨어 가속 끄기 필수. 카메라/마이크 권한을 허용해주세요.</span>
+            <label for="voiceVol" style="font-size: 0.9em; margin-right: 10px;">🎤 화상통화 소리 증폭:</label>
+            <input type="range" id="voiceVol" min="1" max="5" step="0.5" value="1" style="vertical-align: middle;">
+            <span id="volLabel" style="font-size: 0.8em; margin-left: 5px;">1x (기본)</span>
+        </div>
+        <div style="margin-top: 10px;">
+            <span class="warning">⚠️ 주의: 하드웨어 가속 끄기 필수. 카메라/마이크 권한을 허용해주세요.</span>
+        </div>
     </div>
 
     <div id="videoContainer">
@@ -63,6 +82,40 @@
     <div class="cam-box" id="remoteCamBox" style="display: none;">
         <video id="remoteCam" autoplay playsinline></video>
         <div class="cam-label">상대방</div>
+    </div>
+
+    <!-- 추가 기능 UI -->
+    <!-- 1. 리액션 둥둥 애니메이션 컨테이너 -->
+    <div id="reactionContainer" style="position: fixed; bottom: 0; right: 100px; width: 100px; height: 100%; pointer-events: none; z-index: 50; overflow: hidden;"></div>
+
+    <!-- 2. 하단 리액션 & SOS 버튼 바 -->
+    <div id="featureBar" style="position: fixed; bottom: 20px; right: 120px; display: none; gap: 10px; z-index: 40;">
+        <button class="emoji-btn" onclick="sendReaction('❤️')">❤️</button>
+        <button class="emoji-btn" onclick="sendReaction('😂')">😂</button>
+        <button class="emoji-btn" onclick="sendReaction('😮')">😮</button>
+        <button id="sosBtn" onclick="sendSOS()" style="background-color: #ff9800; color: white;">⏸️ 팝콘 타임!</button>
+    </div>
+
+    <!-- 3. 실시간 채팅창 -->
+    <div id="chatBox" style="position: fixed; bottom: 20px; left: 120px; width: 250px; background: rgba(0,0,0,0.5); border-radius: 8px; padding: 10px; display: none; flex-direction: column; z-index: 40; border: 1px solid #444;">
+        <div id="chatMessages" style="height: 150px; overflow-y: auto; text-align: left; font-size: 0.85em; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;"></div>
+        <div style="display: flex;">
+            <input type="text" id="chatInput" placeholder="메시지..." style="flex-grow: 1; padding: 5px; font-size: 14px; margin-right: 0;" onkeypress="if(event.key==='Enter') sendChat()">
+            <button onclick="sendChat()" style="padding: 5px 10px; margin: 0 0 0 5px;">전송</button>
+        </div>
+    </div>
+
+    <!-- 4. 레이저 포인터 -->
+    <div id="laserPointer" style="position: fixed; width: 12px; height: 12px; background-color: red; border-radius: 50%; box-shadow: 0 0 10px red; pointer-events: none; display: none; z-index: 100;"></div>
+
+    <!-- 5. 시네마 모드 버튼 -->
+    <button id="cinemaBtn" onclick="toggleCinemaMode()" style="position: fixed; top: 10px; right: 10px; z-index: 60; background: rgba(0,0,0,0.6); color: white;">🎬 조명 끄기</button>
+
+    <!-- 6. 대형 SOS 알림 팝업 -->
+    <div id="sosOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column;">
+        <h1 style="font-size: 3em; color: #ff9800; margin-bottom: 10px;">🚨 팝콘 리필 타임!</h1>
+        <p style="font-size: 1.5em;">상대방이 잠시 휴식을 요청했습니다.<br>영화를 일시정지 해주세요.</p>
+        <button onclick="document.getElementById('sosOverlay').style.display='none'" style="margin-top: 20px; font-size: 1.2em;">확인 (닫기)</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
