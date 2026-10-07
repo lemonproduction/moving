@@ -304,7 +304,7 @@ window.sendChat = function() {
     appendChatMessage(msg, true);
     socket.emit('room-event', { roomId, type: 'chat', data: msg });
     input.value = '';
-    toggleChat(); // 전송 후 자동 닫기
+    input.focus(); // 전송 후에도 창 유지 및 포커스
 };
 function appendChatMessage(msg, isMe) {
     const container = document.getElementById('tickerContainer');
@@ -315,9 +315,9 @@ function appendChatMessage(msg, isMe) {
     div.style.whiteSpace = 'nowrap';
     div.style.fontSize = isMe ? '1.8em' : '2em';
     div.style.fontWeight = 'bold';
-    div.style.color = isMe ? '#ccc' : '#fff';
-    div.style.textShadow = '2px 2px 5px rgba(0,0,0,0.8), -1px -1px 3px rgba(0,0,0,0.8)';
-    div.style.top = (Math.random() * 80) + '%';
+    div.style.color = isMe ? '#FFD700' : '#FFFFFF'; // 나는 노란색, 상대는 흰색
+    div.style.textShadow = '2px 2px 8px #000, -2px -2px 8px #000';
+    div.style.top = (Math.random() * 60 + 15) + '%'; // 15% ~ 75% 사이에서 랜덤 출현 (겹침 방지)
     div.style.right = '-100%';
     div.style.transition = 'transform 8s linear';
     container.appendChild(div);
