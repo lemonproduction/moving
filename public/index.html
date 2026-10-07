@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>프라이빗 영화관</title>
     <style>
         * { box-sizing: border-box; }
@@ -10,9 +10,9 @@
         
         /* 로비 화면 (방 입장 전) */
         #lobbyContainer { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); }
-        h1 { margin: 0 0 10px 0; font-size: 2.5em; letter-spacing: -1px; }
-        p { color: #888; margin-top: 0; font-size: 1.1em; margin-bottom: 30px; }
-        .controls { padding: 30px; background: rgba(255,255,255,0.05); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 15px; max-width: 400px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        h1 { margin: 0 0 10px 0; font-size: 2.2em; letter-spacing: -1px; }
+        p { color: #888; margin-top: 0; font-size: 1em; margin-bottom: 30px; }
+        .controls { padding: 25px; background: rgba(255,255,255,0.05); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 15px; max-width: 350px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
         input { padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #333; background-color: rgba(0,0,0,0.5); color: #fff; width: 100%; outline: none; }
         input:focus { border-color: #E50914; }
         button { padding: 14px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
@@ -20,60 +20,71 @@
         #hostBtn:hover { background-color: #f40612; transform: translateY(-2px); }
         #joinBtn { background-color: #333; color: white; }
         #joinBtn:hover { background-color: #444; transform: translateY(-2px); }
-        .warning { color: #ff9800; font-size: 0.85em; margin-top: 10px; }
+        .warning { color: #ff9800; font-size: 0.85em; margin-top: 5px; line-height: 1.4; }
 
         /* 영화관 화면 (방 입장 후) */
-        #theaterContainer { width: 100%; height: 100%; position: relative; display: none; background-color: #000; }
+        #theaterContainer { width: 100%; height: 100%; position: relative; display: none; background-color: #000; overflow: hidden; }
         
-        #videoContainer { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
         #videoPlayer { width: 100%; height: 100%; object-fit: contain; outline: none; }
         
-        /* 프리미엄 웹캠 디자인 */
-        .cam-box { position: absolute; top: 20px; width: 110px; aspect-ratio: 3/4; background-color: #111; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 20; transition: opacity 0.3s, transform 0.3s; }
+        /* 세련된 웹캠 오버레이 (우측 상단 세로 정렬) */
+        .cam-wrapper { position: absolute; top: 20px; right: 15px; display: flex; flex-direction: column; gap: 12px; z-index: 20; }
+        .cam-box { width: 75px; aspect-ratio: 3/4; background-color: #111; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.15); box-shadow: 0 8px 24px rgba(0,0,0,0.8); transition: transform 0.3s; }
         .cam-box:hover { transform: scale(1.05); border-color: rgba(255,255,255,0.4); }
-        #localCamBox { left: 20px; }
-        #remoteCamBox { right: 20px; }
         .cam-box video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .cam-label { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.8)); text-align: center; font-size: 11px; padding: 10px 0 5px 0; font-weight: bold; text-shadow: 0 1px 3px rgba(0,0,0,1); }
         
-        /* 프리미엄 툴바 (하단) */
-        #theaterToolbar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; padding: 10px 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); z-index: 40; transition: opacity 0.5s; }
-        .toolbar-group { display: flex; align-items: center; gap: 10px; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 15px; }
-        .toolbar-group:last-child { border-right: none; padding-right: 0; }
+        /* 모바일 최적화 하단 툴바 */
+        #theaterToolbar { 
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            display: flex; align-items: center; justify-content: space-evenly; 
+            background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(15px); 
+            border-radius: 40px; border: 1px solid rgba(255,255,255,0.15); 
+            z-index: 40; width: 92%; max-width: 420px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
         
-        .emoji-btn { background: none; font-size: 1.5em; padding: 5px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .emoji-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
-        #sosBtn { background-color: rgba(229, 9, 20, 0.8); color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; }
-        #sosBtn:hover { background-color: #E50914; }
-        #chatToggleBtn { background: rgba(255,255,255,0.15); color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; }
+        .toolbar-btn { background: none; border: none; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 1.4em; color: white; cursor: pointer; transition: background 0.2s; padding: 0; margin: 0; }
+        .toolbar-btn:active { background: rgba(255,255,255,0.2); transform: scale(1.1); }
         
-        /* 오디오 증폭 슬라이더 (툴바 내) */
-        .vol-control { display: flex; align-items: center; gap: 8px; color: #ccc; font-size: 0.85em; }
-        .vol-control input[type=range] { width: 80px; height: 4px; padding: 0; background: rgba(255,255,255,0.2); border: none; border-radius: 2px; }
+        .separator { width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 5px; }
+
+        /* 오디오 증폭 슬라이더 */
+        .vol-control { display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+        .vol-control span.icon { font-size: 1.2em; }
+        .vol-control input[type=range] { width: 70px; height: 4px; padding: 0; background: rgba(255,255,255,0.3); border: none; border-radius: 2px; }
+        .vol-control span.val { font-size: 0.75em; color: #ddd; width: 22px; text-align: right; }
         
         /* 실시간 채팅창 */
-        #chatBox { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); width: 300px; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); border-radius: 16px; padding: 15px; display: none; flex-direction: column; z-index: 40; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #chatBox { position: absolute; bottom: 95px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); border-radius: 16px; padding: 15px; display: none; flex-direction: column; z-index: 40; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         #chatMessages { height: 200px; overflow-y: auto; text-align: left; font-size: 0.9em; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
         .chat-msg { background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 12px; word-break: break-all; max-width: 85%; }
-        .chat-me { background: rgba(229, 9, 20, 0.3); align-self: flex-end; border-bottom-right-radius: 2px; }
+        .chat-me { background: rgba(229, 9, 20, 0.4); align-self: flex-end; border-bottom-right-radius: 2px; }
         .chat-you { align-self: flex-start; border-bottom-left-radius: 2px; }
         .chat-input-row { display: flex; gap: 8px; }
         .chat-input-row input { flex-grow: 1; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); }
-        .chat-input-row button { padding: 10px 15px; border-radius: 8px; background: #fff; color: #000; }
+        .chat-input-row button { padding: 10px 15px; border-radius: 8px; background: #fff; color: #000; font-weight: bold; }
 
-        /* 리액션 및 레이저 */
-        #reactionContainer { position: absolute; bottom: 0; right: 10vw; width: 100px; height: 100%; pointer-events: none; z-index: 50; overflow: hidden; }
-        .reaction-bubble { position: absolute; font-size: 2.5em; bottom: -50px; opacity: 1; animation: floatUp 3s ease-out forwards; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
+        /* 리액션 둥둥 */
+        #reactionContainer { position: absolute; bottom: 80px; right: 30px; width: 60px; height: 100%; pointer-events: none; z-index: 50; }
+        .reaction-bubble { position: absolute; font-size: 2.2em; bottom: -50px; opacity: 1; animation: floatUp 3s ease-out forwards; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
         @keyframes floatUp { 
             0% { transform: translateY(0) scale(0.5); opacity: 0; }
-            10% { transform: translateY(-50px) scale(1.2); opacity: 1; }
-            100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+            10% { transform: translateY(-30px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-80vh) scale(1); opacity: 0; }
         }
-        #laserPointer { position: absolute; width: 14px; height: 14px; background-color: #E50914; border-radius: 50%; box-shadow: 0 0 15px #E50914, 0 0 5px #fff; pointer-events: none; display: none; z-index: 100; transition: top 0.05s, left 0.05s; }
+        
+        #laserPointer { position: absolute; width: 12px; height: 12px; background-color: #E50914; border-radius: 50%; box-shadow: 0 0 15px #E50914, 0 0 5px #fff; pointer-events: none; display: none; z-index: 100; transition: top 0.05s, left 0.05s; }
         
         #sosOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
-        #sosOverlay h1 { font-size: 3.5em; color: #E50914; margin-bottom: 10px; }
-        #sosOverlay p { font-size: 1.2em; color: #ddd; }
+        #sosOverlay h1 { font-size: 3em; color: #E50914; margin-bottom: 10px; }
+        #sosOverlay p { font-size: 1.1em; color: #ddd; padding: 0 20px; }
+        
+        @media (min-width: 768px) {
+            .cam-wrapper { right: 30px; top: 30px; gap: 20px; }
+            .cam-box { width: 120px; }
+            #theaterToolbar { max-width: 500px; padding: 10px 15px; }
+            .toolbar-btn { font-size: 1.6em; }
+        }
     </style>
 </head>
 <body>
@@ -84,46 +95,51 @@
         
         <div class="controls">
             <div id="status" style="font-weight: bold; color: #ccc;">연결 대기 중...</div>
-            <input type="text" id="roomInput" placeholder="입장할 방 이름 (예: movie-room)" value="movie-room">
+            <input type="text" id="roomInput" placeholder="입장할 방 이름 (예: movie)" value="movie-room">
             <button id="hostBtn">방 만들기 (영화 공유)</button>
             <button id="joinBtn">방 참여하기 (같이 보기)</button>
-            <div class="warning">⚠️ 주의: 하드웨어 가속을 꺼야 넷플릭스가 보입니다.<br>카메라/마이크 권한을 꼭 허용해주세요.</div>
+            <div class="warning">⚠️ 주의: 하드웨어 가속을 끄고 마이크 권한을 꼭 허용해주세요.</div>
         </div>
     </div>
 
     <!-- 2. 극장 화면 (입장 후) -->
     <div id="theaterContainer">
+        <!-- 배경 영상 꽉 차게 -->
         <div id="videoContainer">
             <video id="videoPlayer" autoplay playsinline></video>
         </div>
 
-        <div class="cam-box" id="localCamBox" style="display: none;">
-            <video id="localCam" autoplay playsinline muted></video>
-            <div class="cam-label">나</div>
-        </div>
-        <div class="cam-box" id="remoteCamBox" style="display: none;">
-            <video id="remoteCam" autoplay playsinline></video>
-            <div class="cam-label">상대방</div>
+        <!-- 우측 상단 웹캠 스택 -->
+        <div class="cam-wrapper">
+            <div class="cam-box" id="localCamBox" style="display: none;">
+                <video id="localCam" autoplay playsinline muted></video>
+            </div>
+            <div class="cam-box" id="remoteCamBox" style="display: none;">
+                <video id="remoteCam" autoplay playsinline></video>
+            </div>
         </div>
 
-        <!-- 하단 프리미엄 툴바 -->
+        <!-- 하단 심플 툴바 -->
         <div id="theaterToolbar">
-            <div class="toolbar-group">
-                <button class="emoji-btn" onclick="sendReaction('❤️')">❤️</button>
-                <button class="emoji-btn" onclick="sendReaction('😂')">😂</button>
-                <button class="emoji-btn" onclick="sendReaction('😮')">😮</button>
-            </div>
-            <div class="toolbar-group">
-                <button id="chatToggleBtn" onclick="toggleChat()">💬 채팅</button>
-                <button id="sosBtn" onclick="sendSOS()">⏸️ 팝콘 타임</button>
-            </div>
-            <div class="toolbar-group vol-control">
-                🎤 <input type="range" id="voiceVol" min="1" max="5" step="0.5" value="1">
-                <span id="volLabel">1x</span>
+            <button class="toolbar-btn" onclick="sendReaction('❤️')">❤️</button>
+            <button class="toolbar-btn" onclick="sendReaction('😂')">😂</button>
+            <button class="toolbar-btn" onclick="sendReaction('😮')">😮</button>
+            
+            <div class="separator"></div>
+            
+            <button class="toolbar-btn" id="chatToggleBtn" onclick="toggleChat()">💬</button>
+            <button class="toolbar-btn" onclick="sendSOS()">⏸️</button>
+            
+            <div class="separator"></div>
+            
+            <div class="vol-control">
+                <span class="icon">🎤</span>
+                <input type="range" id="voiceVol" min="1" max="5" step="0.5" value="1">
+                <span class="val" id="volLabel">1x</span>
             </div>
         </div>
 
-        <!-- 실시간 채팅창 -->
+        <!-- 채팅창 -->
         <div id="chatBox">
             <div id="chatMessages"></div>
             <div class="chat-input-row">
@@ -135,15 +151,15 @@
         <div id="reactionContainer"></div>
         <div id="laserPointer"></div>
 
-        <!-- 대형 SOS 팝업 -->
+        <!-- SOS 팝업 -->
         <div id="sosOverlay">
-            <h1>🚨 팝콘 리필 타임!</h1>
-            <p>상대방이 잠시 휴식을 요청했습니다.<br>영화를 일시정지 해주세요.</p>
-            <button onclick="document.getElementById('sosOverlay').style.display='none'" style="margin-top: 30px; background: #E50914; padding: 12px 30px; font-size: 1.1em;">확인 (닫기)</button>
+            <h1>🚨 휴식 요청!</h1>
+            <p>상대방이 팝콘을 리필하러 갔습니다.<br>영화를 잠시 멈춰주세요.</p>
+            <button onclick="document.getElementById('sosOverlay').style.display='none'" style="margin-top: 20px; background: #E50914; padding: 12px 30px; font-size: 1.1em; border-radius: 8px; border: none; color: white; cursor: pointer;">닫기</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=4"></script>
 </body>
 </html>
