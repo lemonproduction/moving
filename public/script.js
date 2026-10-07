@@ -24,45 +24,53 @@ let isHost = false;
 let remoteAudioCtx;
 let remoteGainNode;
 
+window.changeVol = function(val) {
+    document.getElementById('volLabel').innerText = val + 'x';
+    if (window.remoteGainNode) {
+        window.remoteGainNode.gain.value = parseFloat(val);
+    }
+    // Safari fallback: 혹시 WebAudio가 작동안하면 video 볼륨이라도 조절 (최대 1.0)
+    const remoteCam = document.getElementById('remoteCam');
+    if (remoteCam && val <= 1) {
+        remoteCam.volume = val;
+    }
+};
+
 function initAudioBooster() {
-    if (!remoteAudioCtx) {
-        // 반드시 유저 클릭 이벤트 안에서 최초 생성해야 iOS에서 막히지 않음
-        remoteAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        remoteGainNode = remoteAudioCtx.createGain();
-        remoteGainNode.connect(remoteAudioCtx.destination);
+    if (!window.remoteAudioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        window.remoteAudioCtx = new AudioContext();
+        window.remoteGainNode = window.remoteAudioCtx.createGain();
+        window.remoteGainNode.connect(window.remoteAudioCtx.destination);
         
-        const voiceVolInput = document.getElementById('voiceVol');
-        const volLabel = document.getElementById('volLabel');
-        if (voiceVolInput) {
-            remoteGainNode.gain.value = voiceVolInput.value;
-            voiceVolInput.addEventListener('input', (e) => {
-                const val = e.target.value;
-                volLabel.innerText = `${val}x ${val == 1 ? '(기본)' : ''}`;
-                remoteGainNode.gain.value = val;
-            });
-        }
-        
-        // iOS Safari AudioContext Resume 처리
-        if (remoteAudioCtx.state === 'suspended') {
-            remoteAudioCtx.resume();
-        }
+        const vol = document.getElementById('voiceVol').value;
+        window.remoteGainNode.gain.value = parseFloat(vol);
+    }
+    if (window.remoteAudioCtx.state === 'suspended') {
+        window.remoteAudioCtx.resume();
     }
 }
 
 function applyAudioBooster(stream) {
-    if (!remoteAudioCtx || !remoteGainNode) return;
+    if (!window.remoteAudioCtx || !window.remoteGainNode) return;
     
-    // 비디오 태그의 기존 오디오는 끄기(중복 소리 방지)
-    remoteCam.muted = true;
+    const remoteCam = document.getElementById('remoteCam');
+    remoteCam.muted = true; // 중복 에코 방지
     
     if (!stream.boostConnected && stream.getAudioTracks().length > 0) {
-        const source = remoteAudioCtx.createMediaStreamSource(stream);
-        source.connect(remoteGainNode);
-        stream.boostConnected = true;
+        try {
+            // 새 MediaStream 객체로 감싸서 Safari 버그 우회 시도
+            const audioStream = new MediaStream([stream.getAudioTracks()[0]]);
+            const source = window.remoteAudioCtx.createMediaStreamSource(audioStream);
+            source.connect(window.remoteGainNode);
+            stream.boostConnected = true;
+        } catch (e) {
+            console.error("Audio Booster Error:", e);
+            remoteCam.muted = false; // 에러나면 기본 소리라도 나게 켬
+        }
     }
 }
 
-// 오디오 증폭기 전역 변수
 const configuration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
