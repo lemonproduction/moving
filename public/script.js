@@ -1,11 +1,5 @@
 
-// [아이폰 키보드 방어] 키보드가 올라올 때 실제 화면(Visual Viewport) 높이에 맞게 영상 크기 강제 축소!
-if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', () => {
-        document.body.style.height = window.visualViewport.height + 'px';
-        window.scrollTo(0, 0);
-    });
-}
+
 const socket = io();
 
 const hostBtn = document.getElementById('hostBtn');

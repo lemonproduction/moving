@@ -32,21 +32,21 @@
         .cam-box { width: 120px; aspect-ratio: 4/3; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: auto; }
         .cam-box video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         
-        /* 모바일 최적화 (레이아웃 완벽 분리) */
+        /* 모바일 최적화 (안전한 레이아웃) */
         @media (max-width: 600px) {
-            /* 웹캠은 상단 중앙으로 모으기 */
-            #camArea { right: 50%; transform: translateX(50%); top: max(10px, env(safe-area-inset-top)); width: 100%; justify-content: center; }
-            .cam-box { width: 40vw; max-width: 150px; border-radius: 8px; } 
+            /* 1. 웹캠: 기존처럼 우측 상단 유지하되 크기만 키움 */
+            #camArea { top: max(10px, env(safe-area-inset-top)); right: 10px; width: auto; transform: none; justify-content: flex-end; }
+            .cam-box { width: 35vw; border-radius: 8px; } 
             
-            /* 툴바는 웹캠 바로 아래 중앙으로 배치 */
-            #theaterToolbar { top: max(110px, calc(env(safe-area-inset-top) + 100px)); left: 50%; transform: translateX(-50%); width: 92%; justify-content: space-evenly; }
+            /* 2. 툴바: 웹캠과 겹치지 않도록 웹캠 바로 아래(top 110px) 좌측에 배치 */
+            #theaterToolbar { top: max(110px, calc(env(safe-area-inset-top) + 100px)); left: 10px; transform: none; width: auto; justify-content: flex-start; }
             
-            /* 영상은 툴바 아래 공간에만 갇히도록 높이와 위치 강제 조정 (상단 겹침 원천 차단) */
-            #videoContainer { top: max(170px, calc(env(safe-area-inset-top) + 160px)); height: calc(100% - max(170px, calc(env(safe-area-inset-top) + 160px))); }
-            #videoPlayer { object-position: center top; }
+            /* 3. 영상: 안전하게 전체 화면 유지 (왜곡 제거) */
+            #videoContainer { top: 0; height: 100%; }
+            #videoPlayer { object-position: center; }
             
-            /* 채팅창은 키보드가 열릴 때 툴바 밑이 아닌, 바닥(키보드 바로 위)에 뜨도록 위치 변경 */
-            #chatInputWrapper { top: auto; bottom: max(15px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: 95%; }
+            /* 4. 채팅창: 툴바 바로 아래 배치 (바닥에 두면 버그 발생 가능성 있음) */
+            #chatInputWrapper { top: max(170px, calc(env(safe-area-inset-top) + 160px)); bottom: auto; left: 10px; transform: none; width: 90%; }
         }
 
         /* 3. 티커 컨테이너 (넘쳐도 잘리지 않게 overflow 해제) */
@@ -145,6 +145,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=12"></script>
+    <script src="script.js?v=14"></script>
 </body>
 </html>
