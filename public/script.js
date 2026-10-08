@@ -338,7 +338,15 @@ function appendChatMessage(msg, isMe) {
     div.style.whiteSpace = 'nowrap';
     div.style.fontSize = isMe ? '1.8em' : '2em';
     div.style.color = isMe ? '#FFD700' : '#FFFFFF';
-    div.style.top = (Math.random() * 10 + 5) + '%'; // 최상단에 생성 // 영상 중앙을 가리지 않도록 화면 최상단(5~15%)에만 표시
+    let topOffset;
+    if (window.innerHeight > window.innerWidth) {
+        // 세로 모드(모바일): 위아래 레터박스(검은 여백)가 크므로, 실제 영상이 있는 35%~45% 위치로 지정
+        topOffset = Math.random() * 10 + 35; 
+    } else {
+        // 가로 모드(PC): 화면 전체를 쓰므로 10%~25% 위치로 지정
+        topOffset = Math.random() * 15 + 10;
+    }
+    div.style.top = topOffset + '%'; // 영상 중앙을 가리지 않도록 화면 최상단(5~15%)에만 표시
     
     // 시작 위치 (화면 오른쪽 끝에 딱 붙어서 시작)
     div.style.left = '100vw'; 
