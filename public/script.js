@@ -307,42 +307,61 @@ function showReactionBubble(emoji) {
 
 // 3. 실시간 틱톡(Ticker) 채팅
 window.sendChat = function() {
-    const input = document.getElementById('chatInput');
-    const msg = input.value.trim();
-    if (!msg) return; // 메시지가 없으면 리턴
-    
-    // 방에 입장하지 않았더라도 UI 테스트를 위해 로컬 화면에는 띄워줌!
-    if (!roomId) {
-        appendChatMessage(msg + " (오프라인 테스트)", true);
-    } else {
-        appendChatMessage(msg, true);
-        socket.emit('room-event', { roomId, type: 'chat', data: msg });
+    try {
+        const input = document.getElementById('chatInput');
+        const msg = input.value.trim();
+        if (!msg) return; 
+        
+        if (typeof roomId === 'undefined' || !roomId) {
+            appendChatMessage(msg, true);
+        } else {
+            appendChatMessage(msg, true);
+            if (typeof socket !== 'undefined' && socket) {
+                socket.emit('room-event', { roomId, type: 'chat', data: msg });
+            }
+        }
+        
+        input.value = '';
+    } catch (e) {
+        console.error(e);
+        alert("채팅 전송 에러: " + e.message);
     }
-    
-    input.value = '';
-    input.focus(); 
 };
+
 function appendChatMessage(msg, isMe) {
     const container = document.getElementById('tickerContainer');
     if(!container) return;
+    
     const div = document.createElement('div');
     div.innerText = msg;
     div.style.position = 'absolute';
     div.style.whiteSpace = 'nowrap';
     div.style.fontSize = isMe ? '1.8em' : '2em';
     div.style.fontWeight = 'bold';
-    div.style.color = isMe ? '#FFD700' : '#FFFFFF'; // 나는 노란색, 상대는 흰색
+    div.style.color = isMe ? '#FFD700' : '#FFFFFF';
     div.style.textShadow = '2px 2px 8px #000, -2px -2px 8px #000';
-    div.style.top = (Math.random() * 30 + 15) + '%'; // 15%~45% 사이에서만 출현 (하단 짤림 완벽 방지)
+    div.style.top = (Math.random() * 30 + 15) + '%';
+    
+    // 시작 위치 (화면 오른쪽 밖)
     div.style.right = '-100%';
+    
+    // 호환성을 위한 Webkit 트랜지션 추가
+    div.style.webkitTransition = '-webkit-transform 8s linear';
     div.style.transition = 'transform 8s linear';
+    
     container.appendChild(div);
     
-    // 강제 리플로우 후 이동 애니메이션
-    div.offsetWidth;
-    div.style.transform = 'translateX(-200vw)';
+    // 확실한 애니메이션 트리거 (이중 RequestAnimationFrame)
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            div.style.webkitTransform = 'translateX(-200vw)';
+            div.style.transform = 'translateX(-200vw)';
+        });
+    });
     
-    setTimeout(() => div.remove(), 8000);
+    setTimeout(() => {
+        if (div && div.parentNode) div.remove();
+    }, 8500);
 }
 
 // 4. SOS 팝콘 타임
