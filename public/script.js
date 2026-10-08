@@ -16,7 +16,7 @@ const volLabel = document.getElementById('volLabel');
 
 let screenStream;
 let webcamStream;
-let peerConnection;
+const peers = {};
 let roomId;
 let isHost = false;
 
@@ -144,17 +144,22 @@ joinBtn.addEventListener('click', async () => {
 
 // 게스트 접속 시 (호스트에서만 실행됨)
 socket.on('user-connected', async (userId) => {
-    if (!isHost) return;
+    console.log('User connected:', userId);
+    statusDiv.innerText = `새로운 참가자가 입장했습니다! 연결 중...`;
     
-    console.log('Guest connected:', userId);
-    statusDiv.innerText = `민지님이 입장했습니다! 연결 중...`;
-    
-    createPeerConnection(userId);
+    const pc = createPeerConnection(userId);
 
-    // 영화 스트림 트랙 추가
-    screenStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, screenStream);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    
+    socket.emit('offer', {
+        target: userId,
+        caller: socket.id,
+        sdp: pc.localDescription,
+        screenStreamId: screenStream ? screenStream.id : null,
+        webcamStreamId: webcamStream ? webcamStream.id : null
     });
+});
     
     // 웹캠 스트림 트랙 추가
     webcamStream.getTracks().forEach(track => {
@@ -176,20 +181,22 @@ socket.on('user-connected', async (userId) => {
 
 // Offer 수신 시 (게스트에서만 실행됨)
 socket.on('offer', async (payload) => {
-    if (isHost) return;
-
-    createPeerConnection(payload.caller);
+    if (payload.screenStreamId) {
+        window.hostScreenStreamId = payload.screenStreamId;
+    }
     
-    // 호스트가 보낸 스트림 ID 저장해두기
-    window.hostScreenStreamId = payload.screenStreamId;
-    window.hostWebcamStreamId = payload.webcamStreamId;
-
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-
-    // 내 웹캠 스트림 트랙 추가해서 답변에 포함
-    webcamStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, webcamStream);
+    const pc = createPeerConnection(payload.caller);
+    await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+    
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    
+    socket.emit('answer', {
+        target: payload.caller,
+        caller: socket.id,
+        sdp: pc.localDescription
     });
+});
 
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
@@ -203,23 +210,30 @@ socket.on('offer', async (payload) => {
 
 // 호스트가 Answer 수신 시
 socket.on('answer', async (payload) => {
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-    statusDiv.innerText = `성공적으로 연결되었습니다! 즐거운 관람 되세요 🍿`;
+    const pc = peers[payload.caller];
+    if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        statusDiv.innerText = `연결 완료!`;
+    }
 });
 
 // ICE 
 socket.on('ice-candidate', async (incoming) => {
-    try {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(incoming.candidate));
-    } catch (e) {
-        console.error('Error adding received ice candidate', e);
+    const pc = peers[incoming.sender];
+    if (pc) {
+        try {
+            await pc.addIceCandidate(new RTCIceCandidate(incoming.candidate));
+        } catch (e) {
+            console.error('Error adding ice candidate', e);
+        }
     }
 });
 
 function createPeerConnection(targetUserId) {
-    peerConnection = new RTCPeerConnection(configuration);
-
-    peerConnection.onicecandidate = (event) => {
+    const pc = new RTCPeerConnection(configuration);
+    peers[targetUserId] = pc;
+    
+    pc.onicecandidate = (event) => {
         if (event.candidate) {
             socket.emit('ice-candidate', {
                 target: targetUserId,
@@ -227,66 +241,50 @@ function createPeerConnection(targetUserId) {
             });
         }
     };
-
-    peerConnection.ontrack = (event) => {
+    
+    pc.ontrack = (event) => {
         const stream = event.streams[0];
         
+        // 들어온 스트림이 영화 화면인지 웹캠인지 ID로 구분
+        // 꼼수: 비디오 트랙의 해상도나 호스트 여부로 판단
         if (isHost) {
-            // 호스트는 게스트의 웹캠 스트림만 받음
+            // 호스트는 게스트의 웹캠만 받음
             if (remoteCam.srcObject !== stream) {
-                remoteCam.srcObject = stream; applyAudioBooster(stream);
+                remoteCam.srcObject = stream;
+                applyAudioBooster(stream);
             }
         } else {
-            // 게스트는 호스트로부터 영화와 웹캠 두 가지 스트림을 받음
+            // 게스트는 호스트의 화면을 받거나, 다른 사람의 웹캠을 받음
             if (stream.id === window.hostScreenStreamId) {
                 if (videoPlayer.srcObject !== stream) {
                     videoPlayer.srcObject = stream;
                     statusDiv.innerText = `영화 스트리밍 수신 중 🍿`;
                 }
             } else {
+                // 다른 사람의 웹캠 (게스트2 또는 호스트 웹캠)
                 if (remoteCam.srcObject !== stream) {
-                    remoteCam.srcObject = stream; applyAudioBooster(stream);
+                    remoteCam.srcObject = stream;
+                    applyAudioBooster(stream);
                 }
             }
         }
     };
-
-    peerConnection.onconnectionstatechange = () => {
-        if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
-            statusDiv.innerText = `연결이 끊어졌습니다.`;
-            statusDiv.style.color = '#E50914';
-        }
-    };
-}
-
-function disableInputs() {
-    hostBtn.disabled = true;
-    joinBtn.disabled = true;
-    roomInput.disabled = true;
-}
-
-// ==========================================
-// 추가 기능 구현 (채팅, 이모티콘, SOS, 레이저, 시네마 모드)
-// ==========================================
-
-
-// 1. 소켓 이벤트 수신
-socket.on('room-event', (payload) => {
-    if (payload.type === 'reaction') {
-        showReactionBubble(payload.data);
-    } else if (payload.type === 'chat') {
-        appendChatMessage(payload.data, false);
-    } else if (payload.type === 'sos') {
-        document.getElementById('sosOverlay').style.display = 'flex';
-    } else if (payload.type === 'laser') {
-        const laser = document.getElementById('laserPointer');
-        laser.style.display = 'block';
-        laser.style.left = (payload.data.x * window.innerWidth) + 'px';
-        laser.style.top = (payload.data.y * window.innerHeight) + 'px';
-        
-        clearTimeout(window.laserTimer);
-        window.laserTimer = setTimeout(() => { laser.style.display = 'none'; }, 2000);
+    
+    // 내 웹캠이 있으면 이 커넥션에 추가
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => {
+            pc.addTrack(track, webcamStream);
+        });
     }
+    
+    // 내가 호스트이고 화면공유 중이면 이 커넥션에 추가
+    if (isHost && screenStream) {
+        screenStream.getTracks().forEach(track => {
+            pc.addTrack(track, screenStream);
+        });
+    }
+    
+    return pc;
 });
 
 // 2. 이모티콘 리액션
