@@ -369,7 +369,7 @@ let isChatOpen = false;
 window.toggleChat = function() {
     isChatOpen = !isChatOpen;
     document.getElementById('chatInputWrapper').style.display = isChatOpen ? 'flex' : 'none';
-    document.getElementById('chatToggleBtn').style.background = isChatOpen ? 'rgba(229, 9, 20, 0.8)' : 'rgba(20,20,20,0.8)';
+    document.getElementById('chatToggleBtn').style.background = isChatOpen ? 'rgba(0, 229, 255, 0.2)' : 'rgba(10, 15, 30, 0.8)';
     if(isChatOpen) document.getElementById('chatInput').focus();
 };
 

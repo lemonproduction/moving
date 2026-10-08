@@ -4,91 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>프라이빗 영화관</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
     <style>
 
         * { box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; background: #070913; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; color: #fff; }
+        
+        /* 🌌 배경: 루프탑 밤하늘 (별빛 효과를 위한 패턴) */
+        body {
+            background: radial-gradient(circle at 50% 0%, #152243 0%, #070913 60%, #030408 100%);
+        }
+        
+        /* Material Symbols Base */
+        .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-size: 24px; }
         
         /* 로비 화면 */
-        #lobbyContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #111 0%, #000 100%); z-index: 100; }
-        h1 { margin: 0 0 10px 0; font-size: 2.2em; font-weight: 800; letter-spacing: -1px; background: linear-gradient(to right, #E50914, #ff5722); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        p { color: #888; margin-top: 0; font-size: 1em; margin-bottom: 30px; }
-        .controls { padding: 30px; background: rgba(30, 30, 30, 0.6); border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; flex-direction: column; gap: 15px; max-width: 350px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.8); }
-        input { padding: 14px 18px; font-size: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background-color: rgba(0,0,0,0.5); color: #fff; width: 100%; outline: none; transition: border 0.3s; }
-        input:focus { border-color: #E50914; }
-        button { padding: 16px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 12px; font-weight: 700; transition: all 0.2s; }
-        #hostBtn { background: linear-gradient(135deg, #E50914, #B20710); color: white; box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4); }
-        #hostBtn:active { transform: scale(0.97); }
-        #joinBtn { background-color: rgba(255,255,255,0.1); color: white; }
-        #joinBtn:active { background-color: rgba(255,255,255,0.2); }
-        .warning { color: #ff9800; font-size: 0.8em; margin-top: 5px; opacity: 0.8; }
+        #lobbyContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: rgba(7, 9, 19, 0.8); backdrop-filter: blur(10px); z-index: 100; }
+        h1 { margin: 0 0 8px 0; font-size: 2.8em; font-weight: 800; letter-spacing: -1px; text-shadow: 0 0 20px rgba(0, 229, 255, 0.6); color: #00E5FF; }
+        p { color: #8E8E93; margin-top: 0; font-size: 1.1em; margin-bottom: 40px; }
+        .controls { display: flex; flex-direction: column; gap: 12px; max-width: 320px; width: 100%; background: rgba(15, 20, 35, 0.6); border: 1px solid rgba(0, 229, 255, 0.2); padding: 30px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px rgba(0, 229, 255, 0.1); backdrop-filter: blur(20px); }
+        input { padding: 16px; font-size: 17px; border-radius: 14px; border: 1px solid rgba(0, 229, 255, 0.2); background-color: rgba(0, 0, 0, 0.4); color: #fff; width: 100%; outline: none; transition: box-shadow 0.3s; }
+        input:focus { box-shadow: 0 0 15px rgba(0, 229, 255, 0.4); border-color: #00E5FF; }
+        button { padding: 16px; font-size: 17px; cursor: pointer; border: none; border-radius: 14px; font-weight: 600; transition: all 0.2s; }
+        #hostBtn { background: linear-gradient(135deg, #00E5FF, #0077FF); color: white; box-shadow: 0 5px 20px rgba(0, 119, 255, 0.4); }
+        #joinBtn { background-color: rgba(255,255,255,0.05); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.3); }
+        button:active { transform: scale(0.96); opacity: 0.8; }
 
         /* 극장 화면 */
-        #theaterContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; background: #000; }
+        #theaterContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
         
         #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1; }
-        #videoPlayer { width: 100%; height: 100%; object-fit: contain; }
+        /* 영상 뒤에 은은한 앰비언트 글로우 */
+        #videoPlayer { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 30px rgba(0, 229, 255, 0.15)); }
 
-        /* 부드러운 웹캠 UI */
-        #camArea { position: absolute; top: max(15px, env(safe-area-inset-top)); right: 15px; display: flex; gap: 10px; z-index: 20; pointer-events: none; }
-        .cam-box { width: 110px; aspect-ratio: 4/3; background: #111; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.6); pointer-events: auto; transition: transform 0.3s ease; }
-        .cam-box:hover { transform: scale(1.03); border: 1px solid rgba(255,255,255,0.3); }
+        /* 📸 웹캠 (네온 테두리 액자) */
+        #camArea { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; display: flex; gap: 12px; z-index: 20; pointer-events: none; }
+        .cam-box { width: 120px; aspect-ratio: 4/3; background: #000; border-radius: 16px; overflow: hidden; pointer-events: auto; border: 1px solid rgba(0, 229, 255, 0.3); box-shadow: 0 10px 25px rgba(0,0,0,0.8), 0 0 15px rgba(0, 229, 255, 0.2); }
         .cam-box video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-        /* 고급스러운 우측 채팅 섹션 */
-        #chatSection { position: absolute; top: max(115px, calc(env(safe-area-inset-top) + 105px)); right: 15px; display: flex; align-items: center; gap: 10px; z-index: 40; pointer-events: none; }
+        /* 💬 채팅 버튼 (빛나는 대시보드 토글) */
+        #chatSection { position: absolute; top: max(120px, calc(env(safe-area-inset-top) + 110px)); right: 20px; display: flex; align-items: center; gap: 12px; z-index: 40; pointer-events: none; }
+        #chatToggleBtn { width: 50px; height: 50px; border-radius: 25px; background: rgba(10, 15, 30, 0.8); border: 1px solid rgba(0, 229, 255, 0.4); color: #00E5FF; cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(0, 229, 255, 0.2); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); transition: all 0.2s; }
+        #chatToggleBtn:active { transform: scale(0.9); }
+        #chatToggleBtn .material-symbols-rounded { font-size: 24px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.8); }
         
-        #chatToggleBtn { width: 48px; height: 48px; border-radius: 50%; background: rgba(30,30,30,0.6); border: 1px solid rgba(255,255,255,0.08); color: white; cursor: pointer; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); pointer-events: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
-        #chatToggleBtn:hover { background: rgba(60,60,60,0.8); transform: translateY(-2px); }
-        #chatToggleBtn:active { transform: scale(0.95); }
-        
-        #chatInputWrapper { display: none; background: rgba(20,20,20,0.7); border-radius: 24px; padding: 6px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.7); align-items: center; gap: 8px; }
-        #chatInput { background: transparent; border: none; color: white; outline: none; width: 180px; font-size: 15px; padding: 8px 12px; }
-        #chatInput::placeholder { color: #777; }
-        #chatBtn { background: #E50914; color: white; border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(229, 9, 20, 0.4); transition: transform 0.2s; }
-        #chatBtn:active { transform: scale(0.9); }
+        /* 💬 채팅 입력창 */
+        #chatInputWrapper { display: none; background: rgba(10, 15, 30, 0.85); border-radius: 25px; padding: 5px 5px 5px 16px; border: 1px solid rgba(0, 229, 255, 0.3); backdrop-filter: blur(20px); pointer-events: auto; align-items: center; gap: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        #chatInput { background: transparent; border: none; color: #fff; outline: none; width: 180px; font-size: 15px; padding: 10px 0; }
+        #chatInput::placeholder { color: #5a7599; }
+        #chatBtn { background: #00E5FF; color: #000; border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 0 0 15px rgba(0, 229, 255, 0.5); }
+        #chatBtn .material-symbols-rounded { font-size: 20px; font-weight: 700; }
 
-        /* 하단 프리미엄 넷플릭스 콘솔 (Glassmorphism) */
-        #bottomConsole { position: absolute; bottom: max(30px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; background: rgba(20, 20, 20, 0.6); backdrop-filter: blur(25px) saturate(150%); -webkit-backdrop-filter: blur(25px) saturate(150%); padding: 10px 18px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1); z-index: 40; width: max-content; max-width: 95vw; gap: 10px; }
-        .console-group { display: flex; align-items: center; gap: 6px; }
+        /* 🎛️ 하단 네온 대시보드 콘솔 (자동차 계기판 감성) */
+        #bottomConsole { position: absolute; bottom: max(30px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; background: rgba(10, 15, 25, 0.7); backdrop-filter: blur(25px); border: 1px solid rgba(0, 229, 255, 0.15); border-bottom: 2px solid rgba(0, 229, 255, 0.4); padding: 10px 18px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 25px rgba(0, 229, 255, 0.05); z-index: 40; gap: 8px; }
+        .console-group { display: flex; align-items: center; gap: 4px; }
         
-        /* 리액션 버튼 호버 이펙트 */
-        .console-btn { background: rgba(255,255,255,0.03); border: 1px solid transparent; font-size: 1.4em; color: white; cursor: pointer; border-radius: 50%; width: 44px; height: 44px; transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); display: flex; align-items: center; justify-content: center; }
-        .console-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.15); border: 1px solid rgba(255,255,255,0.15); }
+        .console-btn { background: transparent; border: none; color: #fff; cursor: pointer; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.5em; transition: all 0.2s; }
+        .console-btn:hover { background: rgba(0, 229, 255, 0.1); transform: scale(1.1); }
         .console-btn:active { transform: scale(0.95); }
-        .console-btn.alert { color: #fff; }
-        .console-btn.alert:hover { background: rgba(229, 9, 20, 0.2); border-color: rgba(229, 9, 20, 0.5); }
+        .console-btn.icon-btn { color: #00E5FF; }
+        .console-btn.icon-btn .material-symbols-rounded { font-size: 28px; text-shadow: 0 0 15px rgba(0, 229, 255, 0.6); }
+        .console-btn.alert { color: #FF2A55; }
+        .console-btn.alert .material-symbols-rounded { text-shadow: 0 0 15px rgba(255, 42, 85, 0.6); }
         
-        .separator { width: 1px; height: 28px; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.15), rgba(255,255,255,0)); margin: 0 4px; }
+        .separator { width: 1px; height: 26px; background: rgba(0, 229, 255, 0.2); margin: 0 8px; }
         
-        /* 커스텀 프리미엄 슬라이더 */
-        .vol-group { color: white; display: flex; align-items: center; gap: 6px; margin-left: 2px; }
-        .vol-group input[type=range] { -webkit-appearance: none; width: 80px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); outline: none; margin: 0 6px; }
-        .vol-group input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: transform 0.1s; }
-        .vol-group input[type=range]::-webkit-slider-thumb:active { transform: scale(1.3); }
-        .vol-group #volLabel { font-size: 0.85em; font-weight: 500; width: 32px; color: #eee; text-align: right; font-variant-numeric: tabular-nums; }
+        /* 볼륨 네온 슬라이더 */
+        .vol-group { color: #00E5FF; display: flex; align-items: center; gap: 8px; }
+        .vol-group .material-symbols-rounded { font-size: 24px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.5); }
+        .vol-group input[type=range] { -webkit-appearance: none; width: 90px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); outline: none; }
+        .vol-group input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #00E5FF; cursor: pointer; box-shadow: 0 0 10px #00E5FF; transition: transform 0.1s; }
+        .vol-group input[type=range]::-webkit-slider-thumb:active { transform: scale(1.4); }
+        .vol-group #volLabel { font-size: 14px; width: 28px; color: #fff; text-align: right; font-weight: 600; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
 
+        /* 🌠 자막 티커 (별똥별 네온 메시지) */
         #tickerContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+        #tickerContainer div { background: rgba(10, 20, 35, 0.8) !important; border: 1px solid rgba(0, 229, 255, 0.4) !important; box-shadow: 0 0 20px rgba(0, 229, 255, 0.3) !important; padding: 10px 20px !important; border-radius: 30px !important; backdrop-filter: blur(5px) !important; color: #fff !important; font-weight: bold !important; text-shadow: 0 0 5px rgba(255,255,255,0.5) !important; }
+
+        /* 리액션 및 SOS */
         #reactionContainer { position: absolute; bottom: 100px; right: 30px; width: 60px; height: 100%; pointer-events: none; z-index: 50; }
-        .reaction-bubble { position: absolute; font-size: 2.2em; bottom: -50px; opacity: 1; animation: floatUp 3s ease-out forwards; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); }
-        @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 10% { transform: translateY(-30px) scale(1.2); opacity: 1; } 100% { transform: translateY(-80vh) scale(1); opacity: 0; } }
+        .reaction-bubble { position: absolute; font-size: 2.2em; bottom: -50px; opacity: 1; animation: floatUp 3s ease-out forwards; filter: drop-shadow(0 0 10px rgba(255,255,255,0.3)); }
+        @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 10% { transform: translateY(-20px) scale(1.1); opacity: 1; } 100% { transform: translateY(-70vh) scale(1); opacity: 0; } }
         
-        #sosOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: auto; }
-        #sosOverlay h1 { font-size: 2.8em; color: #E50914; margin-bottom: 10px; font-weight: 800; letter-spacing: -1px; }
-        #sosOverlay p { font-size: 1.1em; color: #ddd; }
-        #sosOverlay button { margin-top: 25px; background: #fff; color: #000; padding: 14px 35px; font-size: 1.1em; border-radius: 30px; border: none; cursor: pointer; font-weight: 700; transition: transform 0.2s; }
-        #sosOverlay button:active { transform: scale(0.95); }
+        #sosOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 9, 19, 0.9); backdrop-filter: blur(10px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: auto; }
+        #sosOverlay h1 { font-size: 3em; color: #FF2A55; margin-bottom: 8px; font-weight: 800; text-shadow: 0 0 30px rgba(255, 42, 85, 0.6); }
+        #sosOverlay p { color: #8E8E93; margin-bottom: 24px; font-size: 1.2em; }
+        #sosOverlay button { background: #00E5FF; color: #000; padding: 16px 40px; border-radius: 20px; font-weight: 800; border: none; box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); font-size: 1.1em; cursor: pointer; }
         
         /* 모바일 세부 조정 */
         @media (max-width: 600px) {
-            .cam-box { width: 32vw; max-width: 120px; border-radius: 12px; } 
-            #chatSection { top: max(100px, calc(env(safe-area-inset-top) + 90px)); right: 10px; }
-            #chatToggleBtn { width: 42px; height: 42px; }
-            #chatInput { width: 140px; font-size: 14px; }
-            #bottomConsole { padding: 8px 12px; border-radius: 40px; }
+            .cam-box { width: 30vw; max-width: 120px; border-radius: 12px; } 
+            #chatSection { top: max(100px, calc(env(safe-area-inset-top) + 80px)); right: 15px; }
+            #chatToggleBtn { width: 44px; height: 44px; }
+            #chatInput { width: 130px; font-size: 15px; }
+            #bottomConsole { padding: 6px 12px; border-radius: 25px; }
             .console-btn { width: 38px; height: 38px; font-size: 1.3em; }
+            .console-btn.icon-btn .material-symbols-rounded { font-size: 24px; }
             .vol-group input[type=range] { width: 60px; }
-            .vol-group #volLabel { font-size: 0.8em; width: 28px; }
+            .separator { margin: 0 6px; }
         }
 
     </style>
@@ -118,16 +131,16 @@
             <div class="cam-box" id="remoteCamBox" style="display: none;"><video id="remoteCam" autoplay playsinline></video></div>
         </div>
 
-        <!-- 3. 우측 독립 채팅 섹션 (웹캠 바로 아래) -->
+        <!-- 3. 우측 독립 채팅 섹션 -->
         <div id="chatSection">
             <div id="chatInputWrapper">
                 <input type="text" id="chatInput" placeholder="메시지 입력..." onkeypress="if(event.key==='Enter') sendChat()">
-                <button id="chatBtn" onclick="sendChat()"><svg viewBox="0 0 24 24" width="18" height="18" fill="white" transform="rotate(-90)"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+                <button id="chatBtn" onclick="sendChat()"><span class="material-symbols-rounded">arrow_upward</span></button>
             </div>
-            <button id="chatToggleBtn" onclick="toggleChat()"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></button>
+            <button id="chatToggleBtn" onclick="toggleChat()"><span class="material-symbols-rounded">chat_bubble</span></button>
         </div>
 
-        <!-- 4. 넷플릭스 스타일 하단 콘솔 -->
+        <!-- 4. 미니멀 애플 스타일 하단 콘솔 -->
         <div id="bottomConsole">
             <div class="console-group">
                 <button class="console-btn" onclick="sendReaction('❤️')">❤️</button>
@@ -136,18 +149,15 @@
             </div>
             <div class="separator"></div>
             <div class="console-group">
-                <button class="console-btn alert" onclick="sendSOS()"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+                <button class="console-btn icon-btn alert" onclick="sendSOS()"><span class="material-symbols-rounded">pause_circle</span></button>
             </div>
             <div class="separator"></div>
             <div class="console-group vol-group">
-                <span style="display:flex; color:#ccc;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></span>
+                <span class="material-symbols-rounded">mic</span>
                 <input type="range" id="voiceVol" min="1" max="5" step="0.5" value="1" oninput="changeVol(this.value)">
                 <span id="volLabel">1x</span>
             </div>
         </div>
-
-        <!-- 티커 자막 컨테이너 -->
-        <div id="tickerContainer"></div>
 
         <!-- 리액션 및 SOS -->
         <div id="reactionContainer"></div>
@@ -161,6 +171,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=18"></script>
+    <script src="script.js?v=20"></script>
 </body>
 </html>
