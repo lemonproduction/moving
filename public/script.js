@@ -26,7 +26,7 @@ let remoteGainNode;
 window.changeVol = function(val) {
     document.getElementById('volLabel').innerText = val + 'x';
     if (window.remoteGainNode) {
-        window.remoteGainNode.gain.value = parseFloat(val);
+        window.remoteGainNode.gain.value = parseFloat(val) * 1.4; // 기본 마이크 볼륨 40% 강제 펌핑
     }
     // Safari fallback: 혹시 WebAudio가 작동안하면 video 볼륨이라도 조절 (최대 1.0)
     const remoteCam = document.getElementById('remoteCam');
@@ -43,7 +43,7 @@ function initAudioBooster() {
         window.remoteGainNode.connect(window.remoteAudioCtx.destination);
         
         const vol = document.getElementById('voiceVol').value;
-        window.remoteGainNode.gain.value = parseFloat(vol);
+        window.remoteGainNode.gain.value = parseFloat(vol) * 1.4; // 기본 마이크 볼륨 40% 강제 펌핑
     }
     if (window.remoteAudioCtx.state === 'suspended') {
         window.remoteAudioCtx.resume();
