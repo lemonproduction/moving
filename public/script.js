@@ -337,31 +337,31 @@ function appendChatMessage(msg, isMe) {
     div.style.position = 'absolute';
     div.style.whiteSpace = 'nowrap';
     div.style.fontSize = isMe ? '1.8em' : '2em';
-    div.style.fontWeight = 'bold';
     div.style.color = isMe ? '#FFD700' : '#FFFFFF';
-    div.style.textShadow = '2px 2px 8px #000, -2px -2px 8px #000';
     div.style.top = (Math.random() * 30 + 15) + '%';
     
-    // 시작 위치 (화면 오른쪽 밖)
-    div.style.right = '-100%';
-    
-    // 호환성을 위한 Webkit 트랜지션 추가
-    div.style.webkitTransition = '-webkit-transform 8s linear';
-    div.style.transition = 'transform 8s linear';
+    // 시작 위치 (화면 오른쪽 끝에 딱 붙어서 시작)
+    div.style.left = '100vw'; 
+    div.style.transform = 'translateX(0)';
     
     container.appendChild(div);
     
-    // 확실한 애니메이션 트리거 (이중 RequestAnimationFrame)
+    // 브라우저 렌더링 강제 업데이트 (오류 방지)
+    window.getComputedStyle(div).transform;
+    
+    // 이동 애니메이션 시작
     requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            div.style.webkitTransform = 'translateX(-200vw)';
-            div.style.transform = 'translateX(-200vw)';
-        });
+        div.style.webkitTransition = '-webkit-transform 6s linear';
+        div.style.transition = 'transform 6s linear';
+        
+        // 화면 왼쪽 끝까지 완벽하게 가로지르기
+        div.style.webkitTransform = 'translateX(-150vw)';
+        div.style.transform = 'translateX(-150vw)';
     });
     
     setTimeout(() => {
         if (div && div.parentNode) div.remove();
-    }, 8500);
+    }, 6500);
 }
 
 // 4. SOS 팝콘 타임
