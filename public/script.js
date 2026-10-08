@@ -338,7 +338,7 @@ function appendChatMessage(msg, isMe) {
     div.style.whiteSpace = 'nowrap';
     div.style.fontSize = isMe ? '1.8em' : '2em';
     div.style.color = isMe ? '#FFD700' : '#FFFFFF';
-    div.style.top = (Math.random() * 10 + 5) + '%'; // 영상 중앙을 가리지 않도록 화면 최상단(5~15%)에만 표시
+    div.style.top = (Math.random() * 10 + 5) + '%'; // 최상단에 생성 // 영상 중앙을 가리지 않도록 화면 최상단(5~15%)에만 표시
     
     // 시작 위치 (화면 오른쪽 끝에 딱 붙어서 시작)
     div.style.left = '100vw'; 
