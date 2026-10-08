@@ -26,7 +26,7 @@ let remoteGainNode;
 window.changeVol = function(val) {
     document.getElementById('volLabel').innerText = val + 'x';
     if (window.remoteGainNode) {
-        window.remoteGainNode.gain.value = parseFloat(val) * 1.4; // 기본 마이크 볼륨 40% 강제 펌핑
+        window.remoteGainNode.gain.value = parseFloat(val) * 2.24; // 기존 1.4배에서 추가 60% 폭풍 펌핑 (총 2.24배)
     }
     // Safari fallback: 혹시 WebAudio가 작동안하면 video 볼륨이라도 조절 (최대 1.0)
     const remoteCam = document.getElementById('remoteCam');
@@ -43,7 +43,7 @@ function initAudioBooster() {
         window.remoteGainNode.connect(window.remoteAudioCtx.destination);
         
         const vol = document.getElementById('voiceVol').value;
-        window.remoteGainNode.gain.value = parseFloat(vol) * 1.4; // 기본 마이크 볼륨 40% 강제 펌핑
+        window.remoteGainNode.gain.value = parseFloat(vol) * 2.24; // 기존 1.4배에서 추가 60% 폭풍 펌핑 (총 2.24배)
     }
     if (window.remoteAudioCtx.state === 'suspended') {
         window.remoteAudioCtx.resume();
@@ -153,14 +153,13 @@ socket.on('user-connected', async (userId) => {
         target: userId,
         caller: socket.id,
         sdp: pc.localDescription,
-        screenStreamId: screenStream ? screenStream.id : null,
-        webcamStreamId: webcamStream ? webcamStream.id : null
+        isHost: isHost
     });
 });
 
 socket.on('offer', async (payload) => {
-    if (payload.screenStreamId) {
-        window.hostScreenStreamId = payload.screenStreamId;
+    if (payload.isHost) {
+        window.hostSocketId = payload.caller;
     }
     
     const pc = createPeerConnection(payload.caller);
@@ -215,8 +214,8 @@ function createPeerConnection(targetUserId) {
             // 호스트(맥북)는 게스트들의 웹캠을 받을 수 있지만, 화면에 표시하지 않음 (서버 역할)
             // 원한다면 볼 수 있게 remoteCam.srcObject = stream 할 수 있으나 UI에서 숨겼음.
         } else {
-            // 게스트(모바일)는 두 종류의 스트림을 받음: 호스트의 영화, 또는 다른 게스트의 웹캠
-            if (stream.id === window.hostScreenStreamId) {
+            // 게스트(모바일)는 스트림 발신자가 호스트(맥북)인지 게스트(민지)인지 확인합니다.
+            if (targetUserId === window.hostSocketId) {
                 if (videoPlayer.srcObject !== stream) {
                     videoPlayer.srcObject = stream;
                     statusDiv.innerText = `영화 스트리밍 수신 중 🍿`;
