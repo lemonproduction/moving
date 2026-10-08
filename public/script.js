@@ -338,7 +338,7 @@ function appendChatMessage(msg, isMe) {
     div.style.whiteSpace = 'nowrap';
     div.style.fontSize = isMe ? '1.8em' : '2em';
     div.style.color = isMe ? '#FFD700' : '#FFFFFF';
-    div.style.top = (Math.random() * 30 + 15) + '%';
+    div.style.top = (Math.random() * 10 + 5) + '%'; // 영상 중앙을 가리지 않도록 화면 최상단(5~15%)에만 표시
     
     // 시작 위치 (화면 오른쪽 끝에 딱 붙어서 시작)
     div.style.left = '100vw'; 
@@ -394,6 +394,11 @@ let isChatOpen = false;
 window.toggleChat = function() {
     isChatOpen = !isChatOpen;
     document.getElementById('chatInputWrapper').style.display = isChatOpen ? 'flex' : 'none';
+    
+    const toggleBtn = document.getElementById('chatToggleBtn');
+    if(toggleBtn) {
+        toggleBtn.style.background = isChatOpen ? '#E50914' : 'rgba(30, 30, 35, 0.8)';
+    }
     
     if(isChatOpen) document.getElementById('chatInput').focus();
 };

@@ -99,6 +99,15 @@
         @media (max-width: 600px) {
             .brand-logo { font-size: 20px; top: 15px; left: 15px; }
             .cam-box { width: 90px; }
+            #bottomConsole { padding: 8px 16px; gap: 8px; width: 95vw; justify-content: center; }
+            .vol-group input[type=range] { width: 55px; }
+            .play-pause-btn { width: 44px; height: 44px; margin: 0 5px; }
+            .play-pause-btn .material-symbols-rounded { font-size: 26px; }
+            .util-btn { font-size: 1.2em; padding: 0 4px; }
+            #chatSection { top: max(140px, calc(env(safe-area-inset-top) + 120px)); right: 15px; flex-direction: column; align-items: flex-end; }
+            #chatToggleBtn { width: 44px; height: 44px; }
+        }
+            .cam-box { width: 90px; }
             #bottomConsole { padding: 10px 18px; gap: 12px; width: 90vw; justify-content: space-between; }
             .vol-group input[type=range] { width: 60px; }
             .play-pause-btn { width: 48px; height: 48px; }
@@ -156,6 +165,7 @@
                 <input type="text" id="chatInput" placeholder="메시지 입력..." onkeypress="if(event.key==='Enter') sendChat()">
                 <button id="chatBtn" onclick="sendChat()"><span class="material-symbols-rounded">arrow_upward</span></button>
             </div>
+            <button id="chatToggleBtn" onclick="toggleChat()"><span class="material-symbols-rounded">chat_bubble</span></button>
         </div>
 
         <!-- 4. 하단 메인 컨트롤러 (목업 완벽 구현) -->
@@ -173,9 +183,7 @@
             
             <!-- 우측 유틸 (채팅 토글, 리액션) -->
             <div class="util-group">
-                <button class="console-btn icon-btn" onclick="toggleChat()">
-                    <span class="material-symbols-rounded">chat_bubble</span>
-                </button>
+                
                 <button class="util-btn" onclick="sendReaction('❤️')">❤️</button>
                 <button class="util-btn" onclick="sendReaction('😂')">😂</button>
             </div>
@@ -194,6 +202,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=27"></script>
+    <script src="script.js?v=28"></script>
 </body>
 </html>
