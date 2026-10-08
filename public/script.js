@@ -26,7 +26,7 @@ let remoteGainNode;
 window.changeVol = function(val) {
     document.getElementById('volLabel').innerText = val + 'x';
     if (window.remoteGainNode) {
-        window.remoteGainNode.gain.value = parseFloat(val) * 5.0; // 넷플릭스를 완전히 압도하도록 초강력 500% 펌핑
+        window.remoteGainNode.gain.value = parseFloat(val) * 1.5;
     }
     // Safari fallback: 혹시 WebAudio가 작동안하면 video 볼륨이라도 조절 (최대 1.0)
     const remoteCam = document.getElementById('remoteCam');
@@ -39,11 +39,23 @@ function initAudioBooster() {
     if (!window.remoteAudioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         window.remoteAudioCtx = new AudioContext();
+        
+        // 프로 방송용 컴프레서 (디지털 찢어짐/자동 음소거 방지하면서 소리만 꽉 채워줌)
+        window.remoteCompressor = window.remoteAudioCtx.createDynamicsCompressor();
+        window.remoteCompressor.threshold.value = -50;
+        window.remoteCompressor.knee.value = 40;
+        window.remoteCompressor.ratio.value = 12;
+        window.remoteCompressor.attack.value = 0.003;
+        window.remoteCompressor.release.value = 0.25;
+
         window.remoteGainNode = window.remoteAudioCtx.createGain();
+        
+        // 소스 -> 컴프레서 -> 게인 -> 스피커
+        window.remoteCompressor.connect(window.remoteGainNode);
         window.remoteGainNode.connect(window.remoteAudioCtx.destination);
         
         const vol = document.getElementById('voiceVol').value;
-        window.remoteGainNode.gain.value = parseFloat(vol) * 5.0; // 넷플릭스를 완전히 압도하도록 초강력 500% 펌핑
+        window.remoteGainNode.gain.value = parseFloat(vol) * 1.5; 
     }
     if (window.remoteAudioCtx.state === 'suspended') {
         window.remoteAudioCtx.resume();
@@ -61,7 +73,7 @@ function applyAudioBooster(stream) {
             // 새 MediaStream 객체로 감싸서 Safari 버그 우회 시도
             const audioStream = new MediaStream([stream.getAudioTracks()[0]]);
             const source = window.remoteAudioCtx.createMediaStreamSource(audioStream);
-            source.connect(window.remoteGainNode);
+            source.connect(window.remoteCompressor);
             stream.boostConnected = true;
         } catch (e) {
             console.error("Audio Booster Error:", e);
@@ -127,7 +139,7 @@ joinBtn.addEventListener('click', async () => {
             audio: {
                 autoGainControl: false,
                 noiseSuppression: false
-                // echoCancellation은 하울링 방지를 위해 기본값(true) 유지
+                // echoCancellation: false // 이어폰 착용 시 애플 하드웨어의 잘못된 오디오 억제 버그 원천 차단
             }
         });
         
