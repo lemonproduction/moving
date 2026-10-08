@@ -36,7 +36,7 @@
         #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1; }
         
         /* 🔥 환상적인 앰비라이트 후광 */
-        #videoContainer::after { content: ''; position: absolute; top: 20%; left: 5%; width: 90%; height: 60%; background: transparent; box-shadow: 0 0 120px 60px rgba(255, 120, 50, 0.15), 0 0 200px 90px rgba(0, 150, 255, 0.15); z-index: -1; pointer-events: none; border-radius: 40%; filter: blur(30px); }
+        #videoContainer::after { content: ''; position: absolute; top: 20%; left: 5%; width: 90%; height: 60%; background: transparent; box-shadow: 0 0 120px 60px rgba(255, 120, 50, 0.15), 0 0 200px 90px rgba(0, 150, 255, 0.15); z-index: -1; pointer-events: none; border-radius: 40%;  }
         
         #videoPlayer { width: 100%; height: 100%; object-fit: contain; }
 
@@ -89,7 +89,7 @@
 
         /* 리액션 및 SOS */
         #reactionContainer { position: absolute; bottom: 120px; right: 30px; width: 60px; height: 100%; pointer-events: none; z-index: 50; }
-        .reaction-bubble { position: absolute; font-size: 2.5em; bottom: -50px; opacity: 1; animation: floatUp 3s cubic-bezier(0.25, 1, 0.5, 1) forwards; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5)); }
+        .reaction-bubble { position: absolute; font-size: 2.5em; bottom: -50px; opacity: 1; animation: floatUp 3s cubic-bezier(0.25, 1, 0.5, 1) forwards; text-shadow: 0 5px 10px rgba(0,0,0,0.5); }
         @keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 15% { transform: translateY(-30px) scale(1.2); opacity: 1; } 100% { transform: translateY(-80vh) scale(1); opacity: 0; } }
         
         #sosOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(25px); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: auto; }
@@ -198,6 +198,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=30"></script>
+    <script src="script.js?v=32"></script>
 </body>
 </html>
