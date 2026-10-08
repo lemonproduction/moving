@@ -87,7 +87,11 @@ hostBtn.addEventListener('click', async () => {
         // 1. 호스트(맥북): 영화 화면(오디오 포함)만 캡처 (웹캠 생략)
         screenStream = await navigator.mediaDevices.getDisplayMedia({ 
             video: { cursor: "always", frameRate: 30, height: { ideal: 720 } },
-            audio: true 
+            audio: {
+                autoGainControl: false,
+                echoCancellation: false,
+                noiseSuppression: false
+            }
         });
         
         videoPlayer.srcObject = screenStream;
@@ -120,7 +124,11 @@ joinBtn.addEventListener('click', async () => {
         // 내 웹캠(얼굴+목소리) 캡처
         webcamStream = await navigator.mediaDevices.getUserMedia({
             video: { width: 320, height: 240, frameRate: 15 },
-            audio: true
+            audio: {
+                autoGainControl: false,
+                noiseSuppression: false
+                // echoCancellation은 하울링 방지를 위해 기본값(true) 유지
+            }
         });
         
         localCam.srcObject = webcamStream;
