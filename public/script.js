@@ -16,7 +16,6 @@ const volLabel = document.getElementById('volLabel');
 
 let screenStream;
 let webcamStream;
-let peerConnection;
 let roomId;
 let isHost = false;
 
@@ -85,23 +84,19 @@ hostBtn.addEventListener('click', async () => {
     if (!roomId) return alert("방 이름을 입력하세요.");
 
     try {
-        // 1. 영화 화면(오디오 포함) 캡처
+        // 1. 호스트(맥북): 영화 화면(오디오 포함)만 캡처 (웹캠 생략)
         screenStream = await navigator.mediaDevices.getDisplayMedia({ 
             video: { cursor: "always", frameRate: 30, height: { ideal: 720 } },
             audio: true 
         });
         
         videoPlayer.srcObject = screenStream;
-        videoPlayer.muted = true; // 본인은 영화 소리 뮤트(원래 플레이어에서 나옴)
+        videoPlayer.muted = true; // 본인은 영화 소리 뮤트
         
-        // 2. 내 웹캠(얼굴+목소리) 캡처
-        webcamStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 320, height: 240, frameRate: 15 },
-            audio: true
-        });
-        
-        localCam.srcObject = webcamStream;
-        localCamBox.style.display = 'block'; remoteCamBox.style.display = 'block';
+        // 호스트는 내 웹캠을 켜지 않음
+        webcamStream = null;
+        localCamBox.style.display = 'none'; 
+        remoteCamBox.style.display = 'none';
         
         isHost = true;
         socket.emit('join-room', roomId);
@@ -143,83 +138,68 @@ joinBtn.addEventListener('click', async () => {
 });
 
 // 게스트 접속 시 (호스트에서만 실행됨)
+const peers = {}; // userId -> RTCPeerConnection
+
 socket.on('user-connected', async (userId) => {
-    if (!isHost) return;
+    console.log('User connected:', userId);
+    statusDiv.innerText = `새로운 참가자가 입장했습니다! 연결 중...`;
     
-    console.log('Guest connected:', userId);
-    statusDiv.innerText = `민지님이 입장했습니다! 연결 중...`;
-    
-    createPeerConnection(userId);
+    const pc = createPeerConnection(userId);
 
-    // 영화 스트림 트랙 추가
-    screenStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, screenStream);
-    });
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
     
-    // 웹캠 스트림 트랙 추가
-    webcamStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, webcamStream);
-    });
-
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-    
-    // 스트림 ID도 같이 보내서 상대방이 어느게 영화고 어느게 웹캠인지 구분하게 함
     socket.emit('offer', {
         target: userId,
         caller: socket.id,
-        sdp: peerConnection.localDescription,
-        screenStreamId: screenStream.id,
-        webcamStreamId: webcamStream.id
+        sdp: pc.localDescription,
+        screenStreamId: screenStream ? screenStream.id : null,
+        webcamStreamId: webcamStream ? webcamStream.id : null
     });
 });
 
-// Offer 수신 시 (게스트에서만 실행됨)
 socket.on('offer', async (payload) => {
-    if (isHost) return;
-
-    createPeerConnection(payload.caller);
+    if (payload.screenStreamId) {
+        window.hostScreenStreamId = payload.screenStreamId;
+    }
     
-    // 호스트가 보낸 스트림 ID 저장해두기
-    window.hostScreenStreamId = payload.screenStreamId;
-    window.hostWebcamStreamId = payload.webcamStreamId;
-
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-
-    // 내 웹캠 스트림 트랙 추가해서 답변에 포함
-    webcamStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, webcamStream);
-    });
-
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-
+    const pc = createPeerConnection(payload.caller);
+    await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+    
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    
     socket.emit('answer', {
         target: payload.caller,
         caller: socket.id,
-        sdp: peerConnection.localDescription
+        sdp: pc.localDescription
     });
 });
 
-// 호스트가 Answer 수신 시
 socket.on('answer', async (payload) => {
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-    statusDiv.innerText = `성공적으로 연결되었습니다! 즐거운 관람 되세요 🍿`;
+    const pc = peers[payload.caller];
+    if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        statusDiv.innerText = `성공적으로 연결되었습니다! 즐거운 관람 되세요 🍿`;
+    }
 });
 
-// ICE 
 socket.on('ice-candidate', async (incoming) => {
-    try {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(incoming.candidate));
-    } catch (e) {
-        console.error('Error adding received ice candidate', e);
+    const pc = peers[incoming.sender];
+    if (pc) {
+        try {
+            await pc.addIceCandidate(new RTCIceCandidate(incoming.candidate));
+        } catch (e) {
+            console.error('Error adding received ice candidate', e);
+        }
     }
 });
 
 function createPeerConnection(targetUserId) {
-    peerConnection = new RTCPeerConnection(configuration);
+    const pc = new RTCPeerConnection(configuration);
+    peers[targetUserId] = pc;
 
-    peerConnection.onicecandidate = (event) => {
+    pc.onicecandidate = (event) => {
         if (event.candidate) {
             socket.emit('ice-candidate', {
                 target: targetUserId,
@@ -228,35 +208,45 @@ function createPeerConnection(targetUserId) {
         }
     };
 
-    peerConnection.ontrack = (event) => {
+    pc.ontrack = (event) => {
         const stream = event.streams[0];
         
         if (isHost) {
-            // 호스트는 게스트의 웹캠 스트림만 받음
-            if (remoteCam.srcObject !== stream) {
-                remoteCam.srcObject = stream; applyAudioBooster(stream);
-            }
+            // 호스트(맥북)는 게스트들의 웹캠을 받을 수 있지만, 화면에 표시하지 않음 (서버 역할)
+            // 원한다면 볼 수 있게 remoteCam.srcObject = stream 할 수 있으나 UI에서 숨겼음.
         } else {
-            // 게스트는 호스트로부터 영화와 웹캠 두 가지 스트림을 받음
+            // 게스트(모바일)는 두 종류의 스트림을 받음: 호스트의 영화, 또는 다른 게스트의 웹캠
             if (stream.id === window.hostScreenStreamId) {
                 if (videoPlayer.srcObject !== stream) {
                     videoPlayer.srcObject = stream;
                     statusDiv.innerText = `영화 스트리밍 수신 중 🍿`;
                 }
             } else {
+                // 다른 게스트의 웹캠!
                 if (remoteCam.srcObject !== stream) {
-                    remoteCam.srcObject = stream; applyAudioBooster(stream);
+                    remoteCam.srcObject = stream; 
+                    applyAudioBooster(stream);
                 }
             }
         }
     };
 
-    peerConnection.onconnectionstatechange = () => {
-        if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
-            statusDiv.innerText = `연결이 끊어졌습니다.`;
-            statusDiv.style.color = '#E50914';
+    pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            // 연결 끊김 처리 (해당 peer 삭제)
+            delete peers[targetUserId];
         }
     };
+
+    // 내가 가진 스트림들(영화 또는 내 웹캠)을 상대방에게 모두 전송
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => pc.addTrack(track, screenStream));
+    }
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => pc.addTrack(track, webcamStream));
+    }
+
+    return pc;
 }
 
 function disableInputs() {

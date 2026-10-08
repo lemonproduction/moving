@@ -36,7 +36,8 @@
         #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1; }
         
         /* 🔥 환상적인 앰비라이트 후광 */
-        #videoContainer::after { content: ''; position: absolute; top: 20%; left: 5%; width: 90%; height: 60%; background: transparent; box-shadow: 0 0 120px 60px rgba(255, 120, 50, 0.15), 0 0 200px 90px rgba(0, 150, 255, 0.15); z-index: -1; pointer-events: none; border-radius: 40%;  }
+        /* 🔥 초경량 앰비라이트 후광 (렉 제로) */
+        #videoContainer::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, rgba(255, 120, 50, 0.15) 0%, rgba(0, 150, 255, 0.05) 40%, transparent 70%); z-index: -1; pointer-events: none; }
         
         #videoPlayer { width: 100%; height: 100%; object-fit: contain; }
 
@@ -63,7 +64,7 @@
         #chatBtn .material-symbols-rounded { font-size: 18px; font-weight: 700; }
 
         /* 🎛️ 하단 메인 컨트롤러 (컴팩트하게 중앙 정렬) */
-        #bottomConsole { position: absolute; bottom: max(35px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; background: rgba(40, 40, 45, 0.5); backdrop-filter: blur(40px) saturate(200%); -webkit-backdrop-filter: blur(40px) saturate(200%); padding: 12px 24px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1); z-index: 40; gap: 20px; width: max-content; }
+        #bottomConsole { position: absolute; bottom: max(35px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; background: rgba(40, 40, 45, 0.5); backdrop-filter: blur(15px) saturate(150%); -webkit-backdrop-filter: blur(15px) saturate(150%); padding: 12px 24px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1); z-index: 40; gap: 20px; width: max-content; }
         
         .console-btn { background: transparent; border: none; color: #fff; cursor: pointer; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
         .console-btn:active { transform: scale(0.9); }
@@ -198,6 +199,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=34"></script>
+    <script src="script.js?v=36"></script>
 </body>
 </html>
