@@ -309,12 +309,18 @@ function showReactionBubble(emoji) {
 window.sendChat = function() {
     const input = document.getElementById('chatInput');
     const msg = input.value.trim();
-    if (!msg || !roomId) return;
+    if (!msg) return; // 메시지가 없으면 리턴
     
-    appendChatMessage(msg, true);
-    socket.emit('room-event', { roomId, type: 'chat', data: msg });
+    // 방에 입장하지 않았더라도 UI 테스트를 위해 로컬 화면에는 띄워줌!
+    if (!roomId) {
+        appendChatMessage(msg + " (오프라인 테스트)", true);
+    } else {
+        appendChatMessage(msg, true);
+        socket.emit('room-event', { roomId, type: 'chat', data: msg });
+    }
+    
     input.value = '';
-    input.focus(); // 전송 후에도 창 유지 및 포커스
+    input.focus(); 
 };
 function appendChatMessage(msg, isMe) {
     const container = document.getElementById('tickerContainer');
@@ -369,7 +375,7 @@ let isChatOpen = false;
 window.toggleChat = function() {
     isChatOpen = !isChatOpen;
     document.getElementById('chatInputWrapper').style.display = isChatOpen ? 'flex' : 'none';
-    document.getElementById('chatToggleBtn').style.background = isChatOpen ? 'rgba(0, 229, 255, 0.2)' : 'rgba(10, 15, 30, 0.8)';
+    document.getElementById('chatToggleBtn').style.background = isChatOpen ? '#E50914' : 'rgba(28, 28, 30, 0.6)';
     if(isChatOpen) document.getElementById('chatInput').focus();
 };
 
