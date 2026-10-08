@@ -26,7 +26,7 @@ let remoteGainNode;
 window.changeVol = function(val) {
     document.getElementById('volLabel').innerText = val + 'x';
     if (window.remoteGainNode) {
-        window.remoteGainNode.gain.value = parseFloat(val) * 1.5;
+        window.remoteGainNode.gain.value = parseFloat(val) * 2.5;
     }
     // Safari fallback: 혹시 WebAudio가 작동안하면 video 볼륨이라도 조절 (최대 1.0)
     const remoteCam = document.getElementById('remoteCam');
@@ -40,22 +40,12 @@ function initAudioBooster() {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         window.remoteAudioCtx = new AudioContext();
         
-        // 프로 방송용 컴프레서 (디지털 찢어짐/자동 음소거 방지하면서 소리만 꽉 채워줌)
-        window.remoteCompressor = window.remoteAudioCtx.createDynamicsCompressor();
-        window.remoteCompressor.threshold.value = -50;
-        window.remoteCompressor.knee.value = 40;
-        window.remoteCompressor.ratio.value = 12;
-        window.remoteCompressor.attack.value = 0.003;
-        window.remoteCompressor.release.value = 0.25;
-
+        // 컴프레서 삭제 (오히려 목소리를 짓누름)
         window.remoteGainNode = window.remoteAudioCtx.createGain();
-        
-        // 소스 -> 컴프레서 -> 게인 -> 스피커
-        window.remoteCompressor.connect(window.remoteGainNode);
         window.remoteGainNode.connect(window.remoteAudioCtx.destination);
         
         const vol = document.getElementById('voiceVol').value;
-        window.remoteGainNode.gain.value = parseFloat(vol) * 1.5; 
+        window.remoteGainNode.gain.value = parseFloat(vol) * 2.5; // 2.5배 펌핑
     }
     if (window.remoteAudioCtx.state === 'suspended') {
         window.remoteAudioCtx.resume();
@@ -73,7 +63,7 @@ function applyAudioBooster(stream) {
             // 새 MediaStream 객체로 감싸서 Safari 버그 우회 시도
             const audioStream = new MediaStream([stream.getAudioTracks()[0]]);
             const source = window.remoteAudioCtx.createMediaStreamSource(audioStream);
-            source.connect(window.remoteCompressor);
+            source.connect(window.remoteGainNode);
             stream.boostConnected = true;
         } catch (e) {
             console.error("Audio Booster Error:", e);
@@ -238,6 +228,7 @@ function createPeerConnection(targetUserId) {
             if (targetUserId === window.hostSocketId) {
                 if (videoPlayer.srcObject !== stream) {
                     videoPlayer.srcObject = stream;
+                    videoPlayer.volume = 0.15; // 넷플릭스 볼륨을 15%로 대폭 축소 (이게 진짜 원인이었음!)
                     statusDiv.innerText = `영화 스트리밍 수신 중 🍿`;
                 }
             } else {
