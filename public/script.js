@@ -394,7 +394,7 @@ let isChatOpen = false;
 window.toggleChat = function() {
     isChatOpen = !isChatOpen;
     document.getElementById('chatInputWrapper').style.display = isChatOpen ? 'flex' : 'none';
-    document.getElementById('chatToggleBtn').style.background = isChatOpen ? '#E50914' : 'rgba(28, 28, 30, 0.6)';
+    
     if(isChatOpen) document.getElementById('chatInput').focus();
 };
 
