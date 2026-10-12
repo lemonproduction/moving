@@ -159,9 +159,9 @@ joinBtn.addEventListener('click', async () => {
     if (!roomId) return alert("방 이름을 입력하세요.");
 
     try {
-        // 내 웹캠(얼굴+목소리) 캡처
+        // 내 웹캠(얼굴+목소리) 캡처 - 확대 모드를 위해 640x480 선명한 화질 지원
         webcamStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 320, height: 240, frameRate: 15 },
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } },
             audio: {
                 autoGainControl: false,
                 noiseSuppression: false
@@ -448,3 +448,13 @@ window.toggleChat = function() {
 };
 
 window.showFeatures = showFeatures;
+
+// 8. 웹캠 클릭 시 확대 / 축소 (대화 중심 모드)
+window.toggleCamExpand = function(el) {
+    if (!el) return;
+    // 다른 캠이 열려있다면 닫고, 현재 캠 토글
+    document.querySelectorAll('.cam-box').forEach(box => {
+        if (box !== el) box.classList.remove('expanded');
+    });
+    el.classList.toggle('expanded');
+};
