@@ -19,9 +19,10 @@ let webcamStream;
 let roomId;
 let isHost = false;
 
-// 오디오 증폭기 전역 변수
+// 오디오 증폭 및 믹서 전역 변수
 let remoteAudioCtx;
 let remoteGainNode;
+let movieGainNode;
 
 window.changeVol = function(val) {
     document.getElementById('volLabel').innerText = val + 'x';
@@ -40,17 +41,33 @@ function initAudioBooster() {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         window.remoteAudioCtx = new AudioContext();
         
-        // 컴프레서 삭제 (오히려 목소리를 짓누름)
+        // 1. 게스트 음성 증폭기 (기본 2.5배 펌핑)
         window.remoteGainNode = window.remoteAudioCtx.createGain();
         window.remoteGainNode.connect(window.remoteAudioCtx.destination);
-        
-        const vol = document.getElementById('voiceVol').value;
-        window.remoteGainNode.gain.value = parseFloat(vol) * 2.5; // 2.5배 펌핑
+        const vol = document.getElementById('voiceVol') ? document.getElementById('voiceVol').value : 1;
+        window.remoteGainNode.gain.value = parseFloat(vol) * 2.5;
+
+        // 2. 넷플릭스 영화 전용 감쇄기 (iOS 사파리 100% 강제 고정 버그 우회 -> 15%로 축소)
+        window.movieGainNode = window.remoteAudioCtx.createGain();
+        window.movieGainNode.connect(window.remoteAudioCtx.destination);
+        window.movieGainNode.gain.value = 0.15; // 넷플릭스 소리를 15%로 부드럽게 배경음화
     }
     if (window.remoteAudioCtx.state === 'suspended') {
         window.remoteAudioCtx.resume();
     }
 }
+
+// 화면 터치 시 Safari AudioContext 자동 활성화 보장
+document.addEventListener('touchstart', () => {
+    if (window.remoteAudioCtx && window.remoteAudioCtx.state === 'suspended') {
+        window.remoteAudioCtx.resume();
+    }
+}, { passive: true });
+document.addEventListener('click', () => {
+    if (window.remoteAudioCtx && window.remoteAudioCtx.state === 'suspended') {
+        window.remoteAudioCtx.resume();
+    }
+});
 
 function applyAudioBooster(stream) {
     if (!window.remoteAudioCtx || !window.remoteGainNode) return;
@@ -60,14 +77,33 @@ function applyAudioBooster(stream) {
     
     if (!stream.boostConnected && stream.getAudioTracks().length > 0) {
         try {
-            // 새 MediaStream 객체로 감싸서 Safari 버그 우회 시도
             const audioStream = new MediaStream([stream.getAudioTracks()[0]]);
             const source = window.remoteAudioCtx.createMediaStreamSource(audioStream);
             source.connect(window.remoteGainNode);
             stream.boostConnected = true;
         } catch (e) {
-            console.error("Audio Booster Error:", e);
+            console.error("Voice Audio Booster Error:", e);
             remoteCam.muted = false; // 에러나면 기본 소리라도 나게 켬
+        }
+    }
+}
+
+function applyMovieAudio(stream) {
+    if (!window.remoteAudioCtx || !window.movieGainNode) return;
+    
+    // 핵심: iOS 사파리가 100% 볼륨으로 때려박는 것을 막기 위해 비디오 태그는 뮤트!
+    videoPlayer.muted = true;
+    
+    if (!stream.movieBoostConnected && stream.getAudioTracks().length > 0) {
+        try {
+            const audioStream = new MediaStream([stream.getAudioTracks()[0]]);
+            const source = window.remoteAudioCtx.createMediaStreamSource(audioStream);
+            source.connect(window.movieGainNode);
+            stream.movieBoostConnected = true;
+            console.log("🎬 넷플릭스 오디오가 Web Audio 믹서에 연결되었습니다 (15% 적용)");
+        } catch (e) {
+            console.error("Movie Audio Booster Error:", e);
+            videoPlayer.muted = false; // 혹시 Web Audio 실패 시 기본 소리 유지
         }
     }
 }
@@ -228,7 +264,7 @@ function createPeerConnection(targetUserId) {
             if (targetUserId === window.hostSocketId) {
                 if (videoPlayer.srcObject !== stream) {
                     videoPlayer.srcObject = stream;
-                    videoPlayer.volume = 0.15; // 넷플릭스 볼륨을 15%로 대폭 축소 (이게 진짜 원인이었음!)
+                    applyMovieAudio(stream); // Web Audio 가상 믹서로 iOS 100% 볼륨 버그 원천 차단 (15% 적용)
                     statusDiv.innerText = `영화 스트리밍 수신 중 🍿`;
                 }
             } else {
