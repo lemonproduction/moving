@@ -6,7 +6,6 @@
     <title>프라이빗 영화관</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
     <style>
-
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=SF+Pro+Display:wght@400;500;600&display=swap');
         
         * { box-sizing: border-box; }
@@ -21,25 +20,98 @@
         /* 로비 화면 */
         #lobbyContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: radial-gradient(circle at 50% 50%, #1a1a24 0%, #000 100%); z-index: 100; }
         #lobbyContainer h1 { font-family: 'Playfair Display', serif; margin: 0 0 10px 0; font-size: 3em; font-weight: 600; }
-        #lobbyContainer p { color: #8E8E93; margin-top: 0; font-size: 1.1em; margin-bottom: 40px; }
-        .controls { display: flex; flex-direction: column; gap: 14px; max-width: 340px; width: 100%; background: rgba(255,255,255,0.03); padding: 35px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(20px); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        input { padding: 18px; font-size: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background-color: rgba(0,0,0,0.5); color: #fff; width: 100%; outline: none; transition: border 0.3s; }
+        #lobbyContainer p { color: #8E8E93; margin-top: 0; font-size: 1.1em; margin-bottom: 32px; }
+        .controls { display: flex; flex-direction: column; gap: 12px; max-width: 360px; width: 100%; background: rgba(255,255,255,0.03); padding: 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(20px); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        input { padding: 16px; font-size: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background-color: rgba(0,0,0,0.5); color: #fff; width: 100%; outline: none; transition: border 0.3s; }
         input:focus { border-color: #fff; background-color: rgba(255,255,255,0.05); }
-        button { padding: 18px; font-size: 16px; cursor: pointer; border: none; border-radius: 12px; font-weight: 600; transition: all 0.2s; }
+        button { padding: 16px; font-size: 16px; cursor: pointer; border: none; border-radius: 12px; font-weight: 600; transition: all 0.2s; }
+        
+        /* 💖 민지 전용 원클릭 입장 버튼 */
+        #minjiSoloBtn {
+            background: linear-gradient(135deg, #FF2A5F 0%, #FF6B8B 50%, #FFB86C 100%);
+            color: #fff;
+            padding: 18px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 14px;
+            box-shadow: 0 10px 28px rgba(255, 42, 95, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            letter-spacing: -0.2px;
+        }
+        #minjiSoloBtn:hover { filter: brightness(1.08); }
+        .lobby-divider { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.3); font-size: 12px; margin: 4px 0; }
+        .lobby-divider::before, .lobby-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+
         #hostBtn { background-color: #fff; color: #000; box-shadow: 0 8px 20px rgba(255,255,255,0.2); }
         #joinBtn { background-color: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); }
         button:active { transform: scale(0.97); }
+        .warning { font-size: 12px; color: #8E8E93; margin-top: 4px; line-height: 1.4; }
 
         /* 극장 화면 */
         #theaterContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; background: #000; }
         
         #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1; }
         
-        /* 🔥 환상적인 앰비라이트 후광 */
         /* 🔥 초경량 앰비라이트 후광 (렉 제로) */
         #videoContainer::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, rgba(255, 120, 50, 0.15) 0%, rgba(0, 150, 255, 0.05) 40%, transparent 70%); z-index: -1; pointer-events: none; }
         
-        #videoPlayer { width: 100%; height: 100%; object-fit: contain; }
+        #videoPlayer {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        /* 🎯 원격 터치 피드백 파동(Ripple) */
+        .touch-ripple {
+            position: fixed;
+            width: 44px;
+            height: 44px;
+            margin-left: -22px;
+            margin-top: -22px;
+            border-radius: 50%;
+            border: 2.5px solid #FF2A5F;
+            background: rgba(255, 42, 95, 0.25);
+            box-shadow: 0 0 20px rgba(255, 42, 95, 0.8);
+            pointer-events: none;
+            z-index: 90;
+            animation: ripplePop 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes ripplePop {
+            0% { transform: scale(0.3); opacity: 1; }
+            60% { transform: scale(1.15); opacity: 0.85; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        /* 상단 상태 토스트 배너 */
+        #remoteToast {
+            position: absolute;
+            top: max(25px, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(25, 25, 32, 0.88);
+            border: 1px solid rgba(255,255,255,0.18);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 80;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            white-space: nowrap;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        #remoteToast.show { opacity: 1; }
 
         /* 📸 웹캠 */
         #camArea { position: absolute; top: max(25px, env(safe-area-inset-top)); right: 25px; display: flex; flex-direction: row; align-items: flex-start; gap: 12px; z-index: 20; pointer-events: none; }
@@ -72,26 +144,214 @@
         #chatBtn { background: #fff; color: #000; border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; }
         #chatBtn .material-symbols-rounded { font-size: 18px; font-weight: 700; }
 
-        /* 🎛️ 하단 메인 컨트롤러 (컴팩트하게 중앙 정렬) */
-        #bottomConsole { position: absolute; bottom: max(35px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; background: rgba(40, 40, 45, 0.5); backdrop-filter: blur(15px) saturate(150%); -webkit-backdrop-filter: blur(15px) saturate(150%); padding: 12px 24px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1); z-index: 40; gap: 20px; width: max-content; }
+        /* 🎛️ 하단 메인 컨트롤러 */
+        #bottomConsole { position: absolute; bottom: max(28px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; background: rgba(35, 35, 42, 0.65); backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%); padding: 10px 20px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1); z-index: 60; gap: 14px; width: max-content; max-width: 96vw; }
         
-        .console-btn { background: transparent; border: none; color: #fff; cursor: pointer; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .console-btn { background: transparent; border: none; color: #fff; cursor: pointer; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 0; }
         .console-btn:active { transform: scale(0.9); }
         
-        /* 중앙 플레이/일시정지 강조 버튼 (SOS) */
-        .play-pause-btn { width: 56px; height: 56px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
-        .play-pause-btn .material-symbols-rounded { font-size: 32px; }
+        /* 리모컨 오픈 버튼 & 터치 토글 칩 */
+        .pill-btn {
+            background: linear-gradient(135deg, #FF2A5F 0%, #FF6B8B 100%);
+            color: #fff;
+            border: none;
+            border-radius: 100px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 42, 95, 0.35);
+            white-space: nowrap;
+        }
+        .pill-btn.secondary {
+            background: rgba(255,255,255,0.12);
+            box-shadow: none;
+            border: 1px solid rgba(255,255,255,0.15);
+            font-weight: 600;
+        }
+        .pill-btn.secondary.active-touch {
+            background: rgba(76, 175, 80, 0.25);
+            border-color: rgba(76, 175, 80, 0.6);
+            color: #98FB98;
+        }
+
+        /* 중앙 플레이/일시정지 강조 버튼 */
+        .play-pause-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0; }
+        .play-pause-btn .material-symbols-rounded { font-size: 28px; }
         
         /* 볼륨 슬라이더 */
-        .vol-group { display: flex; align-items: center; gap: 10px; color: #fff; }
-        .vol-group .material-symbols-rounded { font-size: 22px; opacity: 0.9; }
-        .vol-group input[type=range] { -webkit-appearance: none; width: 80px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.3); outline: none; cursor: pointer; }
+        .vol-group { display: flex; align-items: center; gap: 8px; color: #fff; }
+        .vol-group .material-symbols-rounded { font-size: 20px; opacity: 0.9; }
+        .vol-group input[type=range] { -webkit-appearance: none; width: 70px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.3); outline: none; cursor: pointer; padding: 0; border: none; }
         .vol-group input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        #volLabel { font-size: 11px; color: rgba(255,255,255,0.75); min-width: 28px; font-weight: 600; }
         
         /* 우측 유틸 버튼들 */
-        .util-group { display: flex; align-items: center; gap: 8px; }
-        .util-btn { font-size: 1.5em; background: transparent; border: none; cursor: pointer; transition: transform 0.2s; padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .util-group { display: flex; align-items: center; gap: 6px; }
+        .util-btn { font-size: 1.35em; background: transparent; border: none; cursor: pointer; transition: transform 0.2s; padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .util-btn:hover { transform: scale(1.2); }
+
+        /* 🎮 민지 전용 스마트 리모컨 & 주크박스 드로어 패널 */
+        #remoteDrawer {
+            position: absolute;
+            bottom: max(96px, calc(env(safe-area-inset-bottom) + 86px));
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            width: min(94vw, 520px);
+            max-height: 72dvh;
+            overflow-y: auto;
+            background: rgba(22, 22, 28, 0.92);
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 26px;
+            padding: 18px;
+            z-index: 70;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        #remoteDrawer.open {
+            display: flex;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 10px;
+        }
+        .drawer-title {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .drawer-close {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .remote-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #8E8E93;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 리모컨 버튼 그리드 */
+        .remote-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        .r-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 11px 6px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+        .r-btn:hover { background: rgba(255,255,255,0.15); }
+        .r-btn .material-symbols-rounded { font-size: 20px; }
+        .r-btn.accent-tving { background: rgba(255, 21, 60, 0.22); border-color: rgba(255, 21, 60, 0.45); }
+        .r-btn.accent-netflix { background: rgba(229, 9, 20, 0.22); border-color: rgba(229, 9, 20, 0.45); }
+
+        /* 검색 바 */
+        .search-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .search-row input {
+            flex: 1;
+            padding: 11px 14px;
+            font-size: 14px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.55);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .search-btn {
+            padding: 11px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 12px;
+            white-space: nowrap;
+            color: #fff;
+        }
+        .search-btn.tving { background: #FF153C; }
+        .search-btn.netflix { background: #E50914; }
+
+        /* ⭐ 즐겨찾기 주크박스 칩 목록 */
+        .favorites-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            max-height: 155px;
+            overflow-y: auto;
+            padding: 2px 0;
+        }
+        .fav-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.09);
+            border: 1px solid rgba(255,255,255,0.14);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 100px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .fav-chip:hover { background: rgba(255,255,255,0.18); }
+        .fav-chip .del-fav {
+            opacity: 0.55;
+            font-size: 13px;
+            padding-left: 3px;
+        }
+        .fav-chip .del-fav:hover { opacity: 1; color: #FF4D4D; }
+        .save-current-btn {
+            background: rgba(255, 215, 0, 0.15);
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            color: #FFD700;
+            padding: 5px 10px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
 
         /* 🌠 자막 티커 */
         #tickerContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
@@ -109,18 +369,19 @@
         
         /* 모바일 최적화 */
         @media (max-width: 600px) {
-            .brand-logo { font-size: 20px; top: 15px; left: 15px; }
+            .brand-logo { font-size: 18px; top: 15px; left: 15px; }
             .cam-box { width: 85px; height: 106px; }
             #chatSection { top: max(160px, calc(env(safe-area-inset-top) + 140px)); right: 15px; flex-direction: column; align-items: flex-end; }
             #chatInput { width: 140px; font-size: 14px; }
             #chatToggleBtn { width: 44px; height: 44px; }
-            #bottomConsole { padding: 8px 16px; gap: 8px; width: auto; min-width: 280px; max-width: 95vw; justify-content: center; border-radius: 40px; }
-            .vol-group input[type=range] { width: 50px; }
-            .play-pause-btn { width: 44px; height: 44px; margin: 0 4px; }
-            .play-pause-btn .material-symbols-rounded { font-size: 24px; }
-            .util-btn { font-size: 1.2em; padding: 0; }
+            #bottomConsole { padding: 8px 12px; gap: 7px; width: auto; max-width: 96vw; justify-content: center; border-radius: 40px; }
+            .vol-group input[type=range] { width: 48px; }
+            .play-pause-btn { width: 42px; height: 42px; }
+            .play-pause-btn .material-symbols-rounded { font-size: 22px; }
+            .pill-btn { padding: 7px 11px; font-size: 12px; }
+            .util-btn { font-size: 1.15em; padding: 0; }
+            #remoteDrawer { padding: 14px; bottom: max(84px, calc(env(safe-area-inset-bottom) + 74px)); }
         }
-
     </style>
 </head>
 <body>
@@ -128,17 +389,26 @@
         <h1>PRIVATE<br>THEATER</h1>
         <p>둘만의 완벽한 시네마 룸</p>
         <div class="controls">
-            <div id="status" style="font-weight: 600; color: #8E8E93; font-size: 0.9em; margin-bottom: 5px;">연결 대기 중...</div>
-            <input type="text" id="roomInput" placeholder="입장할 방 이름 (예: movie)" value="movie-room">
-            <button id="hostBtn">방 만들기</button>
-            <button id="joinBtn">참여하기</button>
-            <div class="warning">⚠️ 하드웨어 가속을 끄고 마이크 권한을 허용해주세요.</div>
+            <div id="status" style="font-weight: 600; color: #8E8E93; font-size: 0.9em; margin-bottom: 4px;">연결 대기 중...</div>
+            <input type="text" id="roomInput" placeholder="입장할 방 이름 (예: movie-room)" value="movie-room">
+            
+            <!-- 💖 민지 전용 원클릭 입장 (카메라/마이크 없이 바로 입장 & 리모컨 활성화) -->
+            <button id="minjiSoloBtn">💖 민지 전용 입장 (혼자 편하게 보기)</button>
+            
+            <div class="lobby-divider">또는</div>
+            
+            <button id="joinBtn">같이 보기 입장 (카메라·마이크 ON)</button>
+            <button id="hostBtn">방 만들기 (맥북 호스트)</button>
+            <div class="warning">💡 민지 전용 입장은 카메라/마이크 없이 바로 연결되며,<br>화면을 직접 터치해 티빙·넷플릭스를 골라 볼 수 있어요.</div>
         </div>
     </div>
 
     <div id="theaterContainer">
         <!-- 0. 고급 텍스트 로고 -->
-        <div class="brand-logo">PRIVATE<br>THEATER<span>PREMIUM</span></div>
+        <div class="brand-logo">PRIVATE<br>THEATER<span>MINJI VIP LOUNGE</span></div>
+
+        <!-- 상단 상태 알림 토스트 -->
+        <div id="remoteToast">👆 화면을 터치하거나 리모컨으로 작품을 골라보세요!</div>
 
         <!-- 1. 메인 영화 화면 -->
         <div id="videoContainer">
@@ -174,22 +444,108 @@
             <button id="chatToggleBtn" onclick="toggleChat()"><span class="material-symbols-rounded">chat_bubble</span></button>
         </div>
 
-        <!-- 4. 하단 메인 컨트롤러 (목업 완벽 구현) -->
+        <!-- 🎮 민지 전용 스마트 리모컨 & 주크박스 드로어 -->
+        <div id="remoteDrawer">
+            <div class="drawer-header">
+                <div class="drawer-title">🎮 민지 전용 스마트 리모컨 & 채널</div>
+                <button class="drawer-close" onclick="toggleRemoteDrawer()">✕</button>
+            </div>
+
+            <!-- 1) OTT 바로 전환 & 화면 제어 -->
+            <div>
+                <div class="remote-section-label">
+                    <span>⚡ 빠른 이동 & 재생 제어</span>
+                    <span style="color:#FF6B8B; font-weight:600;">화면 직접 터치·위아래 스와이프 지원</span>
+                </div>
+                <div class="remote-grid">
+                    <button class="r-btn accent-tving" onclick="sendRemoteUrl('https://www.tving.com', '티빙 홈 이동')">
+                        <span>💗 티빙 홈</span>
+                    </button>
+                    <button class="r-btn accent-netflix" onclick="sendRemoteUrl('https://www.netflix.com/browse', '넷플릭스 홈 이동')">
+                        <span>🔴 넷플릭스</span>
+                    </button>
+                    <button class="r-btn" onclick="sendRemoteNav('back')">
+                        <span>🔙 뒤로가기</span>
+                    </button>
+                    <button class="r-btn" onclick="reconnectStream()">
+                        <span>🔄 화면 재연결</span>
+                    </button>
+
+                    <button class="r-btn" onclick="sendRemoteKey('left', '⏪ 10초 뒤로')">
+                        <span>⏪ 10초 전</span>
+                    </button>
+                    <button class="r-btn" onclick="sendRemoteKey('space', '⏯ 재생 / 일시정지')">
+                        <span>⏯ 재생·멈춤</span>
+                    </button>
+                    <button class="r-btn" onclick="sendRemoteKey('right', '⏩ 10초 앞으로')">
+                        <span>⏩ 10초 후</span>
+                    </button>
+                    <button class="r-btn" onclick="sendRemoteKey('s', '⏭ 오프닝 건너뛰기')">
+                        <span>⏭ 스킵(S)</span>
+                    </button>
+
+                    <button class="r-btn" onclick="sendRemoteScroll(420, '⬆️ 위로 스크롤')">
+                        <span>⬆️ 위로 이동</span>
+                    </button>
+                    <button class="r-btn" onclick="sendRemoteScroll(-420, '⬇️ 아래로 스크롤')">
+                        <span>⬇️ 아래로 이동</span>
+                    </button>
+                    <button class="r-btn" onclick="sendRemoteKey('f', '🖥️ 전체화면 전환')">
+                        <span>🖥️ 전체화면</span>
+                    </button>
+                    <button class="r-btn" onclick="sendRemoteKey('esc', '창 닫기 / 전체화면 해제')">
+                        <span>❎ 닫기(ESC)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2) 작품 바로 검색 -->
+            <div>
+                <div class="remote-section-label">🔍 보고 싶은 드라마·예능·영화 바로 검색</div>
+                <div class="search-row">
+                    <input type="text" id="remoteSearchInput" placeholder="작품 제목 입력 (예: 환승연애, 흑백요리사)" onkeypress="if(event.key==='Enter') triggerRemoteSearch('tving')">
+                    <button class="search-btn tving" onclick="triggerRemoteSearch('tving')">티빙 검색</button>
+                    <button class="search-btn netflix" onclick="triggerRemoteSearch('netflix')">넷플 검색</button>
+                </div>
+            </div>
+
+            <!-- 3) 민지 전용 주크박스 (즐겨찾기 목록) -->
+            <div>
+                <div class="remote-section-label">
+                    <span>⭐ 원클릭 즐겨찾기 주크박스</span>
+                    <button class="save-current-btn" onclick="saveCurrentTabFavorite()">➕ 현재 보는 작품 저장</button>
+                </div>
+                <div class="favorites-wrap" id="favoritesContainer"></div>
+            </div>
+        </div>
+
+        <!-- 4. 하단 메인 컨트롤러 -->
         <div id="bottomConsole">
             <!-- 볼륨 슬라이더 -->
             <div class="vol-group">
                 <span class="material-symbols-rounded">volume_up</span>
-                <input type="range" id="voiceVol" min="1" max="5" step="0.5" value="1" oninput="changeVol(this.value)">
+                <input type="range" id="voiceVol" min="0.2" max="4" step="0.2" value="1" oninput="changeVol(this.value)">
+                <span id="volLabel">1x</span>
             </div>
             
-            <!-- 재생/일시정지 (SOS 버튼 역할) -->
-            <button class="console-btn icon-btn play-pause-btn" onclick="sendSOS()">
-                <span class="material-symbols-rounded">pause</span>
+            <!-- 재생/일시정지 (솔로 모드에서는 맥북 스페이스바 제어, 같이 보기에서는 SOS) -->
+            <button class="console-btn icon-btn play-pause-btn" id="mainPlayPauseBtn" onclick="handleMainPlayPause()">
+                <span class="material-symbols-rounded">play_pause</span>
+            </button>
+
+            <!-- 🎮 리모컨 열기 버튼 -->
+            <button class="pill-btn" id="remoteToggleBtn" onclick="toggleRemoteDrawer()">
+                <span class="material-symbols-rounded" style="font-size:18px;">sports_esports</span>
+                <span>리모컨</span>
+            </button>
+
+            <!-- 👆 화면 직접 터치 ON/OFF 토글 -->
+            <button class="pill-btn secondary active-touch" id="touchModeBtn" onclick="toggleTouchControl()">
+                <span id="touchModeText">👆 터치조작 ON</span>
             </button>
             
-            <!-- 우측 유틸 (채팅 토글, 리액션) -->
+            <!-- 우측 유틸 (리액션) -->
             <div class="util-group">
-                
                 <button class="util-btn" onclick="sendReaction('❤️')">❤️</button>
                 <button class="util-btn" onclick="sendReaction('😂')">😂</button>
             </div>
@@ -208,6 +564,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=46"></script>
+    <script src="script.js?v=50"></script>
 </body>
 </html>
