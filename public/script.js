@@ -627,6 +627,34 @@ if (videoPlayer) {
     }, { passive: true });
 }
 
+window.sendNextEpisode = function() {
+    showRemoteToast('⏭ 넷플릭스/티빙 다음 화 재생 중...');
+    // 1순위: 'N' 단축키 (넷플릭스 공식 다음 화 단축키)
+    dispatchRemoteControl({ action: 'key', key: 'n' });
+    // 2순위: 우측 하단 다음화 버튼 영역 정밀 타격
+    setTimeout(() => {
+        dispatchRemoteControl({ action: 'next-episode' });
+    }, 150);
+};
+
+// 하단 컨트롤러 자동 숨김 (화면 터치/활동 시 3.5초간 보이고 다시 부드럽게 반투명화)
+let _consoleHideTimer = null;
+function resetConsoleTimer() {
+    const consoleEl = document.getElementById('bottomConsole');
+    if (!consoleEl) return;
+    consoleEl.classList.remove('autohide');
+    clearTimeout(_consoleHideTimer);
+    _consoleHideTimer = setTimeout(() => {
+        const drawer = document.getElementById('remoteDrawer');
+        if (!drawer || !drawer.classList.contains('open')) {
+            consoleEl.classList.add('autohide');
+        }
+    }, 3500);
+}
+
+document.addEventListener('pointerdown', resetConsoleTimer, { passive: true });
+document.addEventListener('pointermove', resetConsoleTimer, { passive: true });
+
 // 리모컨 버튼 액션 함수들
 window.toggleTouchControl = function() {
     touchControlEnabled = !touchControlEnabled;

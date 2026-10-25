@@ -135,8 +135,31 @@ function runAppleScript(script) {
 
 function runHid(args) {
     return new Promise((resolve) => {
-        if (!IS_MAC || !fs.existsSync(HID_BIN)) return resolve();
-        execFile(HID_BIN, args.map(String), { timeout: 3000 }, () => resolve());
+        if (!IS_MAC || !fs.existsSync(HID_BIN)) return resolve('');
+        execFile(HID_BIN, args.map(String), { timeout: 3000 }, (err, stdout) => {
+            if (err) return resolve('');
+            resolve((stdout || '').trim());
+        });
+    });
+}
+
+// macOS Chrome 활성 탭의 실제 웹 뷰포트 (x, y, w, h)를 AX API로 100% 정밀 추출
+function getChromeExactWebRect() {
+    return new Promise((resolve) => {
+        if (!IS_MAC || !fs.existsSync(HID_BIN)) return resolve(null);
+        execFile(HID_BIN, ['get_chrome_rect'], { timeout: 1500 }, (err, stdout) => {
+            if (err || !stdout) return resolve(null);
+            const parts = stdout.trim().split(',').map(n => parseInt(n, 10));
+            if (parts.length === 4 && parts[2] > 200 && parts[3] > 200) {
+                return resolve({
+                    left: parts[0],
+                    top: parts[1],
+                    width: parts[2],
+                    height: parts[3]
+                });
+            }
+            resolve(null);
+        });
     });
 }
 
@@ -208,7 +231,7 @@ end tell
     };
 }
 
-function calcScreenCoords(winBounds, normX, normY, cmd = {}) {
+async function calcScreenCoords(winBounds, normX, normY, cmd = {}) {
     const x = Math.max(0.01, Math.min(0.99, Number(normX) || 0.5));
     const y = Math.max(0.01, Math.min(0.99, Number(normY) || 0.5));
 
@@ -220,14 +243,24 @@ function calcScreenCoords(winBounds, normX, normY, cmd = {}) {
         };
     }
 
+    // 1순위: Accessibility API(AX)를 통한 실제 크롬 웹 뷰포트 100% 정밀 좌표
+    try {
+        const exactRect = await getChromeExactWebRect();
+        if (exactRect && exactRect.width > 200 && exactRect.height > 200) {
+            return {
+                screenX: Math.round(exactRect.left + x * exactRect.width),
+                screenY: Math.round(exactRect.top + y * exactRect.height)
+            };
+        }
+    } catch (_) {}
+
+    // 2순위 (fallback): 창 경계 기반 뷰포트 추정 (실제 크롬 상단바 140px 보정)
     const winWidth = Math.max(300, winBounds.right - winBounds.left);
     const winHeight = Math.max(300, winBounds.bottom - winBounds.top);
     const aspect = Number(cmd.aspect) > 0.3 ? Number(cmd.aspect) : (16 / 9);
 
-    // 크롬 탭 공유 시 웹 뷰포트는 항상 창 하단(winBottom)에 맞닿아 있음
-    // 뷰포트 높이 = 창 너비 / 스트림 가로세로비 (단, 최소 상단 툴바 82px 확보)
     const estimatedViewportH = Math.round(winWidth / aspect);
-    const viewportHeight = Math.max(200, Math.min(winHeight - 82, estimatedViewportH));
+    const viewportHeight = Math.max(200, Math.min(winHeight - 140, estimatedViewportH));
     const viewportTop = winBounds.bottom - viewportHeight;
 
     return {
@@ -295,15 +328,27 @@ async function executeMacCommand(cmd) {
         if (!winBounds) return;
 
         if (cmd.action === 'click') {
-            const { screenX, screenY } = calcScreenCoords(winBounds, cmd.x, cmd.y, cmd);
+            const { screenX, screenY } = await calcScreenCoords(winBounds, cmd.x, cmd.y, cmd);
             await runHid(['click', screenX, screenY]);
         } else if (cmd.action === 'move') {
-            const { screenX, screenY } = calcScreenCoords(winBounds, cmd.x, cmd.y, cmd);
+            const { screenX, screenY } = await calcScreenCoords(winBounds, cmd.x, cmd.y, cmd);
             await runHid(['move', screenX, screenY]);
         } else if (cmd.action === 'scroll') {
-            const { screenX, screenY } = calcScreenCoords(winBounds, cmd.x ?? 0.5, cmd.y ?? 0.5, cmd);
+            const { screenX, screenY } = await calcScreenCoords(winBounds, cmd.x ?? 0.5, cmd.y ?? 0.5, cmd);
             const dy = parseInt(cmd.dy, 10) || -360;
             await runHid(['scroll', dy, screenX, screenY]);
+        } else if (cmd.action === 'next-episode') {
+            // 넷플릭스 / 티빙 전용: 다음 화 버튼 스마트 클릭 (우측 하단 다음화 버튼 영역 정밀 타격 또는 단축키)
+            const exactRect = await getChromeExactWebRect();
+            if (exactRect) {
+                // 넷플릭스 플레이어 다음화 버튼 위치: 우측 하단 (x: 88~92%, y: 92%)
+                const btnX = Math.round(exactRect.left + exactRect.width * 0.90);
+                const btnY = Math.round(exactRect.top + exactRect.height * 0.92);
+                await runHid(['click', btnX, btnY]);
+            } else {
+                const { screenX, screenY } = await calcScreenCoords(winBounds, 0.90, 0.92, cmd);
+                await runHid(['click', screenX, screenY]);
+            }
         } else if (cmd.action === 'key') {
             const keyMap = {
                 space: 49,
@@ -314,7 +359,8 @@ async function executeMacCommand(cmd) {
                 enter: 36,
                 esc: 53,
                 f: 3,
-                s: 1 // 넷플릭스 오프닝 건너뛰기 단축키 'S'
+                s: 1, // 넷플릭스 오프닝 건너뛰기 단축키 'S'
+                n: 45 // 넷플릭스 다음 화 단축키 'N'
             };
             const code = keyMap[cmd.key] ?? 49;
             await runHid(['key', code]);
