@@ -231,6 +231,43 @@ end tell
     };
 }
 
+async function advanceNetflixEpisodeScript() {
+    const script = `
+tell application "Google Chrome"
+    repeat with w in windows
+        set tIdx to 1
+        repeat with t in tabs of w
+            set u to URL of t
+            if u contains "netflix.com/watch/" then
+                set active tab index of w to tIdx
+                set index of w to 1
+                activate
+                
+                set tid to AppleScript's text item delimiters
+                set AppleScript's text item delimiters to "/watch/"
+                set part2 to text item 2 of u
+                set AppleScript's text item delimiters to "?"
+                set idStr to text item 1 of part2
+                set AppleScript's text item delimiters to tid
+                
+                try
+                    set numId to (idStr as number) + 1
+                    set nextUrl to "https://www.netflix.com/watch/" & (numId as string)
+                    set URL of t to nextUrl
+                    return "NAVIGATED:" & nextUrl
+                on error
+                    return "FAILED_NUMBER"
+                end try
+            end if
+            set tIdx to tIdx + 1
+        end repeat
+    end repeat
+    return "NOT_FOUND"
+end tell
+`;
+    return await runAppleScript(script);
+}
+
 async function calcScreenCoords(winBounds, normX, normY, cmd = {}) {
     const x = Math.max(0.01, Math.min(0.99, Number(normX) || 0.5));
     const y = Math.max(0.01, Math.min(0.99, Number(normY) || 0.5));
@@ -254,14 +291,12 @@ async function calcScreenCoords(winBounds, normX, normY, cmd = {}) {
         }
     } catch (_) {}
 
-    // 2순위 (fallback): 창 경계 기반 뷰포트 추정 (실제 크롬 상단바 140px 보정)
+    // 2순위: 크롬 탭 공유 시 실제 웹 뷰포트는 상단 툴바(약 143px) 바로 아래부터 창 하단까지 100% 차지함
     const winWidth = Math.max(300, winBounds.right - winBounds.left);
     const winHeight = Math.max(300, winBounds.bottom - winBounds.top);
-    const aspect = Number(cmd.aspect) > 0.3 ? Number(cmd.aspect) : (16 / 9);
-
-    const estimatedViewportH = Math.round(winWidth / aspect);
-    const viewportHeight = Math.max(200, Math.min(winHeight - 140, estimatedViewportH));
-    const viewportTop = winBounds.bottom - viewportHeight;
+    const toolbarHeight = 143;
+    const viewportHeight = Math.max(200, winHeight - toolbarHeight);
+    const viewportTop = winBounds.top + toolbarHeight;
 
     return {
         screenX: Math.round(winBounds.left + x * winWidth),
@@ -338,13 +373,20 @@ async function executeMacCommand(cmd) {
             const dy = parseInt(cmd.dy, 10) || -360;
             await runHid(['scroll', dy, screenX, screenY]);
         } else if (cmd.action === 'next-episode') {
-            // 넷플릭스 / 티빙 전용: 다음 화 버튼 스마트 클릭 (크롬 창 활성화 -> 마우스 이동 후 클릭 -> N 단축키 백업)
+            // 넷플릭스 / 티빙 전용: 다음 화 3단계 무조건 전환
+            // 1단계: 넷플릭스 에피소드 ID 직접 변경 시도 (100% 확실한 내비게이션)
+            const navResult = await advanceNetflixEpisodeScript();
+            if (navResult && navResult.startsWith('NAVIGATED:')) {
+                console.log('✅ 넷플릭스 다음 화 URL 직접 전환 성공:', navResult);
+                return;
+            }
+
+            // 2단계: 크롬 탭 활성화 후 우측 하단 다음화 버튼 클릭 + 단축키 N
             await focusAndGetMediaTab(null);
             const { screenX, screenY } = await calcScreenCoords(winBounds, 0.90, 0.92, cmd);
             await runHid(['move', screenX, screenY]);
             await new Promise(r => setTimeout(r, 60));
             await runHid(['click', screenX, screenY]);
-            // 혹시 컨트롤 UI가 숨겨져 있어서 첫 클릭이 화면 깨우기였을 경우를 대비해 180ms 후 한 번 더 클릭 + N키 전송
             setTimeout(async () => {
                 await runHid(['click', screenX, screenY]);
                 await runHid(['key', 45]); // N키
