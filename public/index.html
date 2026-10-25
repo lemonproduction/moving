@@ -412,6 +412,57 @@
             .util-btn { font-size: 1.15em; padding: 0; }
             #remoteDrawer { padding: 14px; bottom: max(84px, calc(env(safe-area-inset-bottom) + 74px)); }
         }
+
+        /* 📱 아이패드 및 가로 모드 (아이폰 Duo 스타일 우측 세로 사이드바 배치) */
+        @media (orientation: landscape) and (min-width: 700px) {
+            #bottomConsole {
+                top: 50% !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: max(18px, env(safe-area-inset-right)) !important;
+                transform: translateY(-50%) !important;
+                flex-direction: column !important;
+                padding: 16px 10px !important;
+                border-radius: 36px !important;
+                gap: 14px !important;
+                max-width: 68px !important;
+                width: auto !important;
+                box-shadow: -10px 0 40px rgba(0,0,0,0.85) !important;
+            }
+            #bottomConsole .vol-group {
+                flex-direction: column !important;
+                gap: 6px !important;
+            }
+            #bottomConsole .vol-group input[type=range] {
+                width: 55px !important;
+                transform: rotate(-90deg) !important;
+                margin: 20px 0 !important;
+            }
+            #bottomConsole .pill-btn {
+                flex-direction: column !important;
+                padding: 10px 8px !important;
+                font-size: 10.5px !important;
+                gap: 3px !important;
+                text-align: center !important;
+                border-radius: 20px !important;
+            }
+            #bottomConsole .util-group {
+                flex-direction: column !important;
+                gap: 8px !important;
+            }
+            #remoteDrawer {
+                right: max(90px, calc(env(safe-area-inset-right) + 80px)) !important;
+                left: auto !important;
+                bottom: auto !important;
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                width: min(50vw, 460px) !important;
+                max-height: 82dvh !important;
+            }
+            #remoteDrawer.open {
+                transform: translateY(-50%) !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -597,6 +648,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=52"></script>
+    <script src="script.js?v=53"></script>
 </body>
 </html>

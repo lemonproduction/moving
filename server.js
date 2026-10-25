@@ -338,17 +338,17 @@ async function executeMacCommand(cmd) {
             const dy = parseInt(cmd.dy, 10) || -360;
             await runHid(['scroll', dy, screenX, screenY]);
         } else if (cmd.action === 'next-episode') {
-            // 넷플릭스 / 티빙 전용: 다음 화 버튼 스마트 클릭 (우측 하단 다음화 버튼 영역 정밀 타격 또는 단축키)
-            const exactRect = await getChromeExactWebRect();
-            if (exactRect) {
-                // 넷플릭스 플레이어 다음화 버튼 위치: 우측 하단 (x: 88~92%, y: 92%)
-                const btnX = Math.round(exactRect.left + exactRect.width * 0.90);
-                const btnY = Math.round(exactRect.top + exactRect.height * 0.92);
-                await runHid(['click', btnX, btnY]);
-            } else {
-                const { screenX, screenY } = await calcScreenCoords(winBounds, 0.90, 0.92, cmd);
+            // 넷플릭스 / 티빙 전용: 다음 화 버튼 스마트 클릭 (크롬 창 활성화 -> 마우스 이동 후 클릭 -> N 단축키 백업)
+            await focusAndGetMediaTab(null);
+            const { screenX, screenY } = await calcScreenCoords(winBounds, 0.90, 0.92, cmd);
+            await runHid(['move', screenX, screenY]);
+            await new Promise(r => setTimeout(r, 60));
+            await runHid(['click', screenX, screenY]);
+            // 혹시 컨트롤 UI가 숨겨져 있어서 첫 클릭이 화면 깨우기였을 경우를 대비해 180ms 후 한 번 더 클릭 + N키 전송
+            setTimeout(async () => {
                 await runHid(['click', screenX, screenY]);
-            }
+                await runHid(['key', 45]); // N키
+            }, 180);
         } else if (cmd.action === 'key') {
             const keyMap = {
                 space: 49,
