@@ -414,18 +414,18 @@
         }
 
         /* 📱 아이패드 및 가로 모드 (아이폰 Duo 스타일 우측 세로 사이드바 배치) */
-        @media (orientation: landscape) and (min-width: 700px) {
+        @media (orientation: landscape) and (min-width: 650px) {
             #bottomConsole {
                 top: 50% !important;
                 bottom: auto !important;
                 left: auto !important;
-                right: max(18px, env(safe-area-inset-right)) !important;
+                right: max(16px, env(safe-area-inset-right)) !important;
                 transform: translateY(-50%) !important;
                 flex-direction: column !important;
-                padding: 16px 10px !important;
+                padding: 14px 10px !important;
                 border-radius: 36px !important;
-                gap: 14px !important;
-                max-width: 68px !important;
+                gap: 12px !important;
+                max-width: 66px !important;
                 width: auto !important;
                 box-shadow: -10px 0 40px rgba(0,0,0,0.85) !important;
             }
@@ -451,13 +451,13 @@
                 gap: 8px !important;
             }
             #remoteDrawer {
-                right: max(90px, calc(env(safe-area-inset-right) + 80px)) !important;
+                right: max(88px, calc(env(safe-area-inset-right) + 78px)) !important;
                 left: auto !important;
                 bottom: auto !important;
                 top: 50% !important;
                 transform: translateY(-50%) !important;
-                width: min(50vw, 460px) !important;
-                max-height: 82dvh !important;
+                width: min(50vw, 440px) !important;
+                max-height: 84dvh !important;
             }
             #remoteDrawer.open {
                 transform: translateY(-50%) !important;
@@ -648,6 +648,6 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js?v=53"></script>
+    <script src="script.js?v=54"></script>
 </body>
 </html>

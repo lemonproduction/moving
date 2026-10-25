@@ -565,16 +565,17 @@ if (videoPlayer) {
             normY: coords.y,
             scrolled: false
         };
+        // iOS Safari / iPadOS에서 setPointerCapture 에러 무시
         try { videoPlayer.setPointerCapture(e.pointerId); } catch (_) {}
-    });
+    }, { passive: false });
 
     videoPlayer.addEventListener('pointermove', (e) => {
         if (!pointerDownInfo || pointerDownInfo.pointerId !== e.pointerId) return;
         const deltaY = e.clientY - pointerDownInfo.lastY;
         const totalDist = Math.hypot(e.clientX - pointerDownInfo.startX, e.clientY - pointerDownInfo.startY);
 
-        // 35px 이상 위/아래로 스와이프하면 자연스러운 원격 스크롤 실행
-        if (Math.abs(deltaY) >= 36 && totalDist > 24) {
+        // 28px 이상 위/아래로 스와이프하면 자연스러운 원격 스크롤 실행
+        if (Math.abs(deltaY) >= 28 && totalDist > 18) {
             pointerDownInfo.scrolled = true;
             pointerDownInfo.lastY = e.clientY;
             // 손가락을 위로 올리면(deltaY < 0) 화면을 아래로 스크롤(음수 dy)
@@ -586,13 +587,14 @@ if (videoPlayer) {
                 y: pointerDownInfo.normY
             });
         }
-    });
+    }, { passive: false });
 
     videoPlayer.addEventListener('pointerup', (e) => {
         if (!pointerDownInfo || pointerDownInfo.pointerId !== e.pointerId) return;
         const totalDist = Math.hypot(e.clientX - pointerDownInfo.startX, e.clientY - pointerDownInfo.startY);
 
-        if (!pointerDownInfo.scrolled && totalDist < 16) {
+        // 아이패드 정밀 터치 감지 (스크롤 안 했고 움직임이 20px 이내면 100% 클릭 처리)
+        if (!pointerDownInfo.scrolled && totalDist < 20) {
             const coords = getNormalizedVideoCoords(e.clientX, e.clientY) || {
                 x: pointerDownInfo.normX,
                 y: pointerDownInfo.normY
@@ -604,10 +606,19 @@ if (videoPlayer) {
                 y: coords.y
             });
         }
+        try { videoPlayer.releasePointerCapture(e.pointerId); } catch (_) {}
         pointerDownInfo = null;
-    });
+    }, { passive: false });
 
-    videoPlayer.addEventListener('pointercancel', () => {
+    videoPlayer.addEventListener('pointercancel', (e) => {
+        if (pointerDownInfo && !pointerDownInfo.scrolled) {
+            // pointercancel 시에도 터치 클릭이 유실되지 않도록 보장
+            dispatchRemoteControl({
+                action: 'click',
+                x: pointerDownInfo.normX,
+                y: pointerDownInfo.normY
+            });
+        }
         pointerDownInfo = null;
     });
 
