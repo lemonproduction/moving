@@ -227,7 +227,12 @@ hostBtn.addEventListener('click', async () => {
 
     try {
         screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-            video: { cursor: "always", frameRate: 30, height: { ideal: 720 } },
+            video: { 
+                cursor: "always", 
+                frameRate: { ideal: 30, max: 30 },
+                width: { ideal: 1280, max: 1280 },
+                height: { ideal: 720, max: 720 }
+            },
             audio: {
                 autoGainControl: false,
                 echoCancellation: false,
@@ -462,6 +467,50 @@ socket.on('ice-candidate', async (incoming) => {
     }
 });
 
+// H.264 하드웨어 가속 코덱 우선 협상 (Apple Silicon & iPad 발열/렉 방지)
+function preferH264Codec(pc) {
+    try {
+        if (!window.RTCRtpReceiver || !RTCRtpReceiver.getCapabilities) return;
+        const capabilities = RTCRtpReceiver.getCapabilities('video');
+        if (!capabilities || !capabilities.codecs) return;
+
+        const h264Codecs = capabilities.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
+        const otherCodecs = capabilities.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
+        if (h264Codecs.length === 0) return;
+
+        const sortedCodecs = [...h264Codecs, ...otherCodecs];
+        const transceivers = pc.getTransceivers ? pc.getTransceivers() : [];
+        transceivers.forEach(t => {
+            if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video' && t.setCodecPreferences) {
+                t.setCodecPreferences(sortedCodecs);
+            }
+        });
+    } catch (e) {
+        console.warn('H.264 코덱 선호도 설정 생략:', e);
+    }
+}
+
+// 비트레이트 및 네트워크 병목 완화 (회사 Wi-Fi TCP 릴레이 끊김 방지)
+async function optimizeVideoSender(sender) {
+    if (!sender || !sender.getParameters || !sender.setParameters) return;
+    try {
+        const params = sender.getParameters();
+        if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+        }
+        // 1.5 Mbps 상한선 (720p/480p 고화질 유지하면서 TCP 버퍼 폭주 방지)
+        params.encodings[0].maxBitrate = 1500000;
+        params.encodings[0].maxFramerate = 30;
+        // 네트워크 지연 시 프레임을 드랍하지 않고 해상도를 부드럽게 조정하여 끊김 없애기
+        params.degradationPreference = 'maintain-framerate';
+        
+        await sender.setParameters(params);
+        console.log('🚀 [WebRTC 최적화] 전송 비트레이트 1.5Mbps 및 maintain-framerate 적용');
+    } catch (e) {
+        console.warn('Sender parameters 최적화 실패:', e);
+    }
+}
+
 function createPeerConnection(targetUserId) {
     const pc = new RTCPeerConnection(configuration);
     peers[targetUserId] = pc;
@@ -476,6 +525,11 @@ function createPeerConnection(targetUserId) {
     };
 
     pc.ontrack = (event) => {
+        // 아이패드 수신 버퍼 누적 방지 (실시간 저지연 렌더링)
+        if (event.receiver && 'playoutDelayHint' in event.receiver) {
+            event.receiver.playoutDelayHint = 0.08;
+        }
+
         const stream = event.streams[0];
         if (!stream) return;
         
@@ -510,12 +564,23 @@ function createPeerConnection(targetUserId) {
     };
 
     if (screenStream) {
-        screenStream.getTracks().forEach(track => pc.addTrack(track, screenStream));
+        screenStream.getTracks().forEach(track => {
+            const sender = pc.addTrack(track, screenStream);
+            if (track.kind === 'video') {
+                optimizeVideoSender(sender);
+            }
+        });
     }
     if (webcamStream) {
-        webcamStream.getTracks().forEach(track => pc.addTrack(track, webcamStream));
+        webcamStream.getTracks().forEach(track => {
+            const sender = pc.addTrack(track, webcamStream);
+            if (track.kind === 'video') {
+                optimizeVideoSender(sender);
+            }
+        });
     }
 
+    preferH264Codec(pc);
     return pc;
 }
 
