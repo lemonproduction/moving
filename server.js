@@ -484,10 +484,31 @@ async function getIceServers() {
         }
     }
 
-    // 기본 STUN 서버 반환
+    // 기본 STUN/TURN 서버 반환 (비상용 하드코딩 Fallback 포함)
     return [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun.relay.metered.ca:80' },
+        {
+            urls: 'turn:standard.relay.metered.ca:80',
+            username: 'c5bac609657a875bc59e966c',
+            credential: '41n4f2JyD30YKjW8'
+        },
+        {
+            urls: 'turn:standard.relay.metered.ca:80?transport=tcp',
+            username: 'c5bac609657a875bc59e966c',
+            credential: '41n4f2JyD30YKjW8'
+        },
+        {
+            urls: 'turn:standard.relay.metered.ca:443',
+            username: 'c5bac609657a875bc59e966c',
+            credential: '41n4f2JyD30YKjW8'
+        },
+        {
+            urls: 'turns:standard.relay.metered.ca:443?transport=tcp',
+            username: 'c5bac609657a875bc59e966c',
+            credential: '41n4f2JyD30YKjW8'
+        }
     ];
 }
 
