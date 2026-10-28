@@ -448,6 +448,12 @@ async function getIceServers() {
         }
     }
 
+    // 기본 Metered TURN 설정 fallback (Render 클라우드 서버 및 로컬 공용)
+    if (!appName || !apiKey) {
+        appName = 'lemon-movie.metered.live';
+        apiKey = 'd95a987a5542950a1697c8d37af5a58d0959';
+    }
+
     if (staticIce) {
         cachedIceServers = staticIce;
         lastIceServerFetch = now;
