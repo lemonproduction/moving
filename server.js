@@ -456,7 +456,9 @@ async function getIceServers() {
 
     if (appName && apiKey) {
         try {
-            const resp = await fetch(`https://${appName}.metered.ca/api/v1/turn/credentials?apiKey=${apiKey}`, {
+            // metered.live 또는 metered.ca 모두 지원
+            const endpointHost = appName.includes('.') ? appName : `${appName}.metered.live`;
+            const resp = await fetch(`https://${endpointHost}/api/v1/turn/credentials?apiKey=${apiKey}`, {
                 signal: AbortSignal.timeout(5000)
             });
             if (resp.ok) {
