@@ -299,6 +299,40 @@ if (minjiSoloBtn) {
     minjiSoloBtn.addEventListener('click', startMinjiSoloMode);
 }
 
+// 아이패드 Safari 및 다양한 기기 호환용 유연한 카메라/마이크 획득 함수
+async function getGuestUserMedia() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('getUserMedia not supported');
+    }
+
+    // 1차: 표준 전면 카메라 + 마이크
+    try {
+        return await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+            audio: true
+        });
+    } catch (e1) {
+        console.warn('1차 미디어 제약조건 실패, 단순 옵션으로 재시도:', e1);
+    }
+
+    // 2차: 제약조건 없는 단순 비디오 + 오디오
+    try {
+        return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    } catch (e2) {
+        console.warn('2차 비디오+오디오 실패, 오디오(마이크) 단독 시도:', e2);
+    }
+
+    // 3차: 마이크만 있는 경우 / 카메라는 차단된 경우
+    try {
+        return await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e3) {
+        console.warn('3차 마이크 단독 실패, 비디오(카메라) 단독 시도:', e3);
+    }
+
+    // 4차: 카메라만 허용된 경우
+    return await navigator.mediaDevices.getUserMedia({ video: true });
+}
+
 // 3. 같이 보기 방 참여 (카메라/마이크 ON)
 joinBtn.addEventListener('click', async () => {
     await updateIceConfiguration();
@@ -307,16 +341,14 @@ joinBtn.addEventListener('click', async () => {
     roomId = roomInput.value.trim() || 'movie-room';
 
     try {
-        webcamStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } },
-            audio: {
-                autoGainControl: false,
-                noiseSuppression: false
-            }
-        });
+        webcamStream = await getGuestUserMedia();
         
-        localCam.srcObject = webcamStream;
-        localCamBox.style.display = 'block';
+        if (webcamStream.getVideoTracks().length > 0) {
+            localCam.srcObject = webcamStream;
+            localCamBox.style.display = 'block';
+        } else {
+            localCamBox.style.display = 'none';
+        }
         remoteCamBox.style.display = 'block';
 
         isHost = false;
@@ -335,8 +367,15 @@ joinBtn.addEventListener('click', async () => {
             }
         }, 2500);
     } catch(err) {
-        console.error("Error accessing camera: ", err);
-        if (confirm("카메라/마이크 권한을 가져올 수 없습니다. '민지 전용 모드(혼자 편하게 보기)'로 바로 입장할까요?")) {
+        console.error("Error accessing camera/microphone: ", err);
+        const isPermissionDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
+        let tipMsg = "카메라/마이크 권한을 가져올 수 없습니다.\n\n";
+        if (isPermissionDenied) {
+            tipMsg += "💡 [해결 방법]\n아이패드 사파리 주소창 왼쪽의 '가나(또는 AA)' 또는 자물쇠 아이콘을 누르고,\n[카메라]와 [마이크]를 '허용'으로 변경해주세요.\n\n";
+        }
+        tipMsg += "카메라/마이크 없이 '민지 전용 모드(혼자 편하게 보기)'로 바로 입장할까요?";
+        
+        if (confirm(tipMsg)) {
             startMinjiSoloMode();
         }
     }
