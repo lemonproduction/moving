@@ -417,6 +417,87 @@ async function executeMacCommand(cmd) {
 }
 
 // ====================================================
+// ICE / TURN 서버 설정 API (회사 방화벽 우회)
+// ====================================================
+const TURN_CONFIG_FILE = path.join(__dirname, 'turn_config.json');
+let cachedIceServers = null;
+let lastIceServerFetch = 0;
+
+async function getIceServers() {
+    const now = Date.now();
+    // 10분간 캐시 유지
+    if (cachedIceServers && (now - lastIceServerFetch < 10 * 60 * 1000)) {
+        return cachedIceServers;
+    }
+
+    let appName = process.env.METERED_APP_NAME;
+    let apiKey = process.env.METERED_API_KEY;
+    let staticIce = null;
+
+    if (fs.existsSync(TURN_CONFIG_FILE)) {
+        try {
+            const raw = JSON.parse(fs.readFileSync(TURN_CONFIG_FILE, 'utf8'));
+            if (raw.appName && raw.apiKey) {
+                appName = raw.appName;
+                apiKey = raw.apiKey;
+            } else if (Array.isArray(raw.iceServers)) {
+                staticIce = raw.iceServers;
+            }
+        } catch (e) {
+            console.error('Error parsing turn_config.json:', e.message);
+        }
+    }
+
+    if (staticIce) {
+        cachedIceServers = staticIce;
+        lastIceServerFetch = now;
+        return cachedIceServers;
+    }
+
+    if (appName && apiKey) {
+        try {
+            const resp = await fetch(`https://${appName}.metered.ca/api/v1/turn/credentials?apiKey=${apiKey}`, {
+                signal: AbortSignal.timeout(5000)
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    cachedIceServers = [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        ...data
+                    ];
+                    lastIceServerFetch = now;
+                    console.log(`✅ Metered TURN 서버 목록 갱신 성공: ${data.length}개 릴레이 서버 확보`);
+                    return cachedIceServers;
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch Metered TURN credentials:', err.message);
+        }
+    }
+
+    // 기본 STUN 서버 반환
+    return [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+}
+
+app.get('/api/ice-servers', async (req, res) => {
+    try {
+        const servers = await getIceServers();
+        res.json({ iceServers: servers });
+    } catch (e) {
+        res.json({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        });
+    }
+});
+
+// ====================================================
 // REST API (리모컨 브릿지 & 즐겨찾기 관리)
 // ====================================================
 app.get('/api/favorites', (req, res) => {

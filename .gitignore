@@ -1,5 +1,7 @@
 node_modules/
 .env
+turn_config.json
+server.log
 mac_hid
 ._*
 .DS_Store

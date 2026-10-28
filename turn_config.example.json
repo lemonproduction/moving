@@ -1,0 +1,5 @@
+{
+  "_comment": "Metered.ca 무료 계정(https://www.metered.ca/tools/openrelay/)에서 발급받은 App Name과 API Key를 입력하세요",
+  "appName": "your-metered-app-name",
+  "apiKey": "your-metered-api-key"
+}

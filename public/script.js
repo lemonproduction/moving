@@ -172,15 +172,33 @@ function applyMovieAudio(stream) {
     }
 }
 
-const configuration = {
+let configuration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }
     ]
 };
 
+// 회사 방화벽/엄격한 네트워크 관통용 TURN 서버 동적 동기화
+async function updateIceConfiguration() {
+    try {
+        const res = await fetch('/api/ice-servers');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.iceServers && data.iceServers.length > 0) {
+                configuration = { iceServers: data.iceServers };
+                console.log('📡 [ICE/TURN] 최신 릴레이 서버 구성 완료:', configuration.iceServers.length, '개 서버 등록됨');
+            }
+        }
+    } catch (e) {
+        console.warn('ICE/TURN 서버 목록 조회 실패, 기본 STUN 유지:', e);
+    }
+}
+updateIceConfiguration();
+
 // 1. 방 만들기 (맥북 호스트)
 hostBtn.addEventListener('click', async () => {
+    await updateIceConfiguration();
     isSoloMode = false;
     initAudioBooster();
     roomId = roomInput.value.trim();
@@ -227,6 +245,7 @@ hostBtn.addEventListener('click', async () => {
 
 // 2. 💖 민지 전용 원클릭 입장 (카메라/마이크 없이 바로 입장 + 원격 리모컨 활성화)
 async function startMinjiSoloMode() {
+    await updateIceConfiguration();
     isSoloMode = true;
     isHost = false;
     touchControlEnabled = true;
@@ -261,6 +280,7 @@ if (minjiSoloBtn) {
 
 // 3. 같이 보기 방 참여 (카메라/마이크 ON)
 joinBtn.addEventListener('click', async () => {
+    await updateIceConfiguration();
     isSoloMode = false;
     initAudioBooster();
     roomId = roomInput.value.trim();
