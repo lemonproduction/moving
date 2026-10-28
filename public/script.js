@@ -304,8 +304,7 @@ joinBtn.addEventListener('click', async () => {
     await updateIceConfiguration();
     isSoloMode = false;
     initAudioBooster();
-    roomId = roomInput.value.trim();
-    if (!roomId) return alert("방 이름을 입력하세요.");
+    roomId = roomInput.value.trim() || 'movie-room';
 
     try {
         webcamStream = await navigator.mediaDevices.getUserMedia({
@@ -327,9 +326,17 @@ joinBtn.addEventListener('click', async () => {
         disableInputs();
         showFeatures();
         updateTouchModeUI();
+
+        // 2.5초 내에 호스트 화면이 안 오면 자동으로 스트림 재요청
+        setTimeout(() => {
+            if (!videoPlayer.srcObject) {
+                console.log('🔄 같이 보기 스트림 미수신 -> 호스트에 재요청 전송');
+                socket.emit('request-stream', roomId);
+            }
+        }, 2500);
     } catch(err) {
         console.error("Error accessing camera: ", err);
-        if (confirm("카메라/마이크 권한 없이 '민지 전용 모드(혼자 편하게 보기)'로 바로 입장할까요?")) {
+        if (confirm("카메라/마이크 권한을 가져올 수 없습니다. '민지 전용 모드(혼자 편하게 보기)'로 바로 입장할까요?")) {
             startMinjiSoloMode();
         }
     }
