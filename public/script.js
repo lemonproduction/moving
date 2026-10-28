@@ -149,11 +149,62 @@ function applyAudioBooster(stream) {
     }
 }
 
+// Opus 오디오 패킷 손실 복구(FEC) 및 스테레오 고품질 SDP 튜닝 (오디오 씹힘/뚝뚝 끊김 완벽 방지)
+function tuneOpusAudioSDP(sdp) {
+    if (!sdp) return sdp;
+    const lines = sdp.split('\r\n');
+    let opusPt = null;
+    for (const line of lines) {
+        const match = line.match(/^a=rtpmap:(\d+)\s+opus\/48000/i);
+        if (match) {
+            opusPt = match[1];
+            break;
+        }
+    }
+    if (!opusPt) return sdp;
+
+    let hasFmtp = false;
+    const newLines = lines.map(line => {
+        if (line.startsWith(`a=fmtp:${opusPt}`)) {
+            hasFmtp = true;
+            let val = line;
+            if (!val.includes('useinbandfec=')) val += ';useinbandfec=1';
+            if (!val.includes('stereo=')) val += ';stereo=1';
+            if (!val.includes('minptime=')) val += ';minptime=10';
+            return val;
+        }
+        return line;
+    });
+
+    if (!hasFmtp) {
+        const rtpIndex = newLines.findIndex(l => l.startsWith(`a=rtpmap:${opusPt}`));
+        if (rtpIndex !== -1) {
+            newLines.splice(rtpIndex + 1, 0, `a=fmtp:${opusPt} useinbandfec=1;stereo=1;minptime=10`);
+        }
+    }
+    return newLines.join('\r\n');
+}
+
 function applyMovieAudio(stream) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    const vol = voiceVolInput ? parseFloat(voiceVolInput.value) : 1;
+
+    // 💡 [핵심] iOS Safari에서는 Web Audio API(createMediaStreamSource)에 리샘플링 버그가 있어
+    // 소리가 뚝뚝 끊기거나 씹히는 현상이 발생합니다.
+    // 솔로 모드이거나 iOS/iPad 기기에서는 브라우저 네이티브 CoreAudio 파이프라인(video.muted = false)을
+    // 직접 사용하여 원음 그대로 부드럽게 재생합니다!
+    if (isSoloMode || isIOS) {
+        videoPlayer.muted = false;
+        videoPlayer.volume = Math.min(1.0, Math.max(0, vol));
+        console.log(`🎬 [네이티브 오디오] iOS/솔로 모드 씹힘 방지 적용 (volume=${videoPlayer.volume})`);
+        return;
+    }
+
     if (!window.remoteAudioCtx || !window.movieGainNode) return;
     
     videoPlayer.muted = true;
-    const vol = voiceVolInput ? parseFloat(voiceVolInput.value) : 1;
     window.movieGainNode.gain.value = isSoloMode ? vol : (0.25 * vol);
     
     if (!stream.movieBoostConnected && stream.getAudioTracks().length > 0) {
@@ -411,11 +462,15 @@ socket.on('user-connected', async (userId) => {
     }
     
     const pc = createPeerConnection(userId);
-    const offer = await pc.createOffer({
+    const rawOffer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true
     });
-    await pc.setLocalDescription(offer);
+    const tunedOffer = new RTCSessionDescription({
+        type: rawOffer.type,
+        sdp: tuneOpusAudioSDP(rawOffer.sdp)
+    });
+    await pc.setLocalDescription(tunedOffer);
     
     socket.emit('offer', {
         target: userId,
@@ -438,8 +493,12 @@ socket.on('offer', async (payload) => {
     const pc = createPeerConnection(payload.caller);
     await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
     
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+    const rawAnswer = await pc.createAnswer();
+    const tunedAnswer = new RTCSessionDescription({
+        type: rawAnswer.type,
+        sdp: tuneOpusAudioSDP(rawAnswer.sdp)
+    });
+    await pc.setLocalDescription(tunedAnswer);
     
     socket.emit('answer', {
         target: payload.caller,
@@ -525,9 +584,13 @@ function createPeerConnection(targetUserId) {
     };
 
     pc.ontrack = (event) => {
-        // 아이패드 수신 버퍼 누적 방지 (실시간 저지연 렌더링)
+        // 지터 버퍼 최적화: 비디오는 실시간 저지연(80ms), 오디오는 씹힘/누락 방지 버퍼(250ms) 확보!
         if (event.receiver && 'playoutDelayHint' in event.receiver) {
-            event.receiver.playoutDelayHint = 0.08;
+            if (event.track && event.track.kind === 'video') {
+                event.receiver.playoutDelayHint = 0.08;
+            } else if (event.track && event.track.kind === 'audio') {
+                event.receiver.playoutDelayHint = 0.25;
+            }
         }
 
         const stream = event.streams[0];
