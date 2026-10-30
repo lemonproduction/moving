@@ -1,5 +1,14 @@
 const socket = io();
 
+// 🔄 소켓 재연결 시 자동으로 현재 방에 재입장하여 연결 유지 (호스트/게스트 끊김 완벽 방지)
+socket.on('connect', () => {
+    console.log('🟢 Socket connected:', socket.id);
+    if (roomId) {
+        console.log(`🔄 Re-joining room [${roomId}] (isHost=${isHost})`);
+        socket.emit('join-room', { roomId, isHost });
+    }
+});
+
 const hostBtn = document.getElementById('hostBtn');
 const joinBtn = document.getElementById('joinBtn');
 const minjiSoloBtn = document.getElementById('minjiSoloBtn');
@@ -308,7 +317,7 @@ hostBtn.addEventListener('click', async () => {
         
         isHost = true;
         keepHostTabAwake();
-        socket.emit('join-room', roomId);
+        socket.emit('join-room', { roomId, isHost: true });
         
         statusDiv.innerText = `호스트 모드: [${roomId}] 방에 입장했습니다. 민지님이 언제든 접속해 원격으로 시청할 수 있습니다.`;
         disableInputs();
@@ -336,19 +345,19 @@ async function startMinjiSoloMode() {
     localCamBox.style.display = 'none';
     remoteCamBox.style.display = 'none';
 
-    socket.emit('join-room', roomId);
+    socket.emit('join-room', { roomId, isHost: false });
     statusDiv.innerText = `민지 전용 모드: [${roomId}] 입장 중...`;
     disableInputs();
     showFeatures();
     updateTouchModeUI();
     showRemoteToast('💖 민지 전용 영화관 입장! 화면을 직접 터치하거나 아래 [리모컨]을 눌러보세요.', 4200);
 
-    // 만약 2.5초 내에 스트림이 안 오면 자동으로 호스트에 스트림 재요청
+    // 호스트 화면 스트림 요청
     setTimeout(() => {
         if (!videoPlayer.srcObject) {
-            socket.emit('request-stream', roomId);
+            socket.emit('request-stream', { roomId });
         }
-    }, 2500);
+    }, 1500);
 }
 
 if (minjiSoloBtn) {
@@ -405,23 +414,23 @@ joinBtn.addEventListener('click', async () => {
         } else {
             localCamBox.style.display = 'none';
         }
-        remoteCamBox.style.display = 'block';
+        remoteCamBox.style.display = 'none'; // 상대방 웹캠 스트림이 수신되면 block으로 표시
 
         isHost = false;
-        socket.emit('join-room', roomId);
+        socket.emit('join-room', { roomId, isHost: false });
         
         statusDiv.innerText = `게스트 모드: [${roomId}] 방에 입장했습니다. 연결 대기 중...`;
         disableInputs();
         showFeatures();
         updateTouchModeUI();
 
-        // 2.5초 내에 호스트 화면이 안 오면 자동으로 스트림 재요청
+        // 1.5초 내에 호스트 화면이 안 오면 자동으로 스트림 재요청
         setTimeout(() => {
             if (!videoPlayer.srcObject) {
                 console.log('🔄 같이 보기 스트림 미수신 -> 호스트에 재요청 전송');
-                socket.emit('request-stream', roomId);
+                socket.emit('request-stream', { roomId });
             }
-        }, 2500);
+        }, 1500);
     } catch(err) {
         console.error("Error accessing camera/microphone: ", err);
         const isPermissionDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
@@ -451,9 +460,39 @@ window.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 const peers = {}; // userId -> RTCPeerConnection
 
-socket.on('user-connected', async (userId) => {
-    console.log('User connected:', userId);
-    statusDiv.innerText = `새로운 참가자가 입장했습니다! 연결 중...`;
+// 서버로부터 방 정보(호스트 ID 등) 수신
+socket.on('room-info', (info) => {
+    console.log('ℹ️ [Room Info 수신]:', info);
+    if (info && info.hostId) {
+        window.hostSocketId = info.hostId;
+        console.log('👑 [호스트 인식 완료] hostSocketId:', window.hostSocketId);
+        // 게스트인데 아직 메인 영화 화면이 연결되지 않았으면 호스트에게 즉시 스트림 요청
+        if (!isHost && (!videoPlayer.srcObject || !videoPlayer.srcObject.active)) {
+            console.log('🎬 호스트 스트림 즉시 요청 전송');
+            socket.emit('request-stream', { roomId });
+        }
+    }
+});
+
+socket.on('host-disconnected', () => {
+    console.warn('⚠️ 호스트 연결이 잠시 끊어졌습니다.');
+    if (!isHost) {
+        statusDiv.innerText = '맥북 호스트 연결이 잠시 끊어졌습니다. 대기 중...';
+    }
+});
+
+socket.on('user-connected', async (incoming) => {
+    const userId = (typeof incoming === 'object' && incoming !== null) ? incoming.userId : incoming;
+    const peerIsHost = (typeof incoming === 'object' && incoming !== null) ? !!incoming.isHost : false;
+
+    if (!userId || userId === socket.id) return;
+    console.log('User connected:', userId, 'peerIsHost:', peerIsHost);
+
+    if (peerIsHost) {
+        window.hostSocketId = userId;
+    }
+
+    statusDiv.innerText = peerIsHost ? `맥북 호스트와 연결 중...` : `새로운 참가자가 입장했습니다! 연결 중...`;
 
     // 기존에 남아있던 연결이 있으면 정리 후 새 연결 생성
     if (peers[userId]) {
@@ -461,7 +500,7 @@ socket.on('user-connected', async (userId) => {
         delete peers[userId];
     }
     
-    const pc = createPeerConnection(userId);
+    const pc = createPeerConnection(userId, peerIsHost);
     const rawOffer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true
@@ -476,13 +515,35 @@ socket.on('user-connected', async (userId) => {
         target: userId,
         caller: socket.id,
         sdp: pc.localDescription,
-        isHost: isHost
+        isHost: isHost,
+        streamType: isHost ? 'screen' : (webcamStream ? 'webcam' : 'none')
     });
+});
+
+socket.on('user-disconnected', (userId) => {
+    console.log('User disconnected:', userId);
+    if (peers[userId]) {
+        try { peers[userId].close(); } catch (_) {}
+        delete peers[userId];
+    }
+    if (window.hostSocketId === userId) {
+        window.hostSocketId = null;
+        if (!isHost) {
+            statusDiv.innerText = '맥북 호스트 연결이 종료되었습니다.';
+        }
+    }
+    if (remoteCam && remoteCam.peerUserId === userId) {
+        remoteCam.srcObject = null;
+        remoteCam.peerUserId = null;
+        if (remoteCamBox) remoteCamBox.style.display = 'none';
+        console.log('📸 원격 화상챗 연결 종료됨');
+    }
 });
 
 socket.on('offer', async (payload) => {
     if (payload.isHost) {
         window.hostSocketId = payload.caller;
+        console.log('👑 [Offer 수신으로 호스트 확인] hostSocketId:', window.hostSocketId);
     }
 
     if (peers[payload.caller]) {
@@ -490,7 +551,7 @@ socket.on('offer', async (payload) => {
         delete peers[payload.caller];
     }
     
-    const pc = createPeerConnection(payload.caller);
+    const pc = createPeerConnection(payload.caller, payload.isHost, payload.streamType);
     await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
     
     const rawAnswer = await pc.createAnswer();
@@ -503,13 +564,18 @@ socket.on('offer', async (payload) => {
     socket.emit('answer', {
         target: payload.caller,
         caller: socket.id,
-        sdp: pc.localDescription
+        sdp: pc.localDescription,
+        isHost: isHost,
+        streamType: isHost ? 'screen' : (webcamStream ? 'webcam' : 'none')
     });
 });
 
 socket.on('answer', async (payload) => {
     const pc = peers[payload.caller];
     if (pc) {
+        if (payload.isHost) {
+            window.hostSocketId = payload.caller;
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
         statusDiv.innerText = `성공적으로 연결되었습니다! 즐거운 관람 되세요 🍿`;
     }
@@ -566,13 +632,15 @@ async function optimizeVideoSender(sender) {
         await sender.setParameters(params);
         console.log('🚀 [WebRTC 최적화] 전송 비트레이트 1.5Mbps 및 maintain-framerate 적용');
     } catch (e) {
-        console.warn('Sender parameters 최적화 실패:', e);
+        console.warn('Sender parameters 최적화 생략(협상 진행 중):', e.message);
     }
 }
 
-function createPeerConnection(targetUserId) {
+function createPeerConnection(targetUserId, peerIsHost = false, peerStreamType = null) {
     const pc = new RTCPeerConnection(configuration);
     peers[targetUserId] = pc;
+    pc.peerIsHost = peerIsHost || (targetUserId === window.hostSocketId);
+    pc.peerStreamType = peerStreamType;
 
     pc.onicecandidate = (event) => {
         if (event.candidate) {
@@ -596,31 +664,44 @@ function createPeerConnection(targetUserId) {
         const stream = event.streams[0];
         if (!stream) return;
         
-        if (!isHost) {
-            // 호스트가 보낸 영화 스트림이거나 솔로 모드인 경우 메인 스크린에 연결
-            if (targetUserId === window.hostSocketId || isSoloMode || !videoPlayer.srcObject) {
-                if (videoPlayer.srcObject !== stream) {
-                    videoPlayer.srcObject = stream;
-                    applyMovieAudio(stream);
-                    videoPlayer.play().catch(() => {});
-                    statusDiv.innerText = `영화 스트리밍 수신 중 🍿`;
-                }
-            } else {
-                if (remoteCam.srcObject !== stream) {
-                    remoteCam.srcObject = stream; 
-                    applyAudioBooster(stream);
-                }
+        // 맥북 호스트는 넷플릭스 탭 방송 전용이므로 외부 수신 비디오는 처리 생략
+        if (isHost) return;
+
+        // 🔥 [화면 vs 화상챗 엄격한 분리 및 고정]
+        // 호스트 판별: hostSocketId 일치, peerIsHost 플래그, peerStreamType이 screen, 또는 솔로 모드
+        const isFromHost = (targetUserId === window.hostSocketId) || pc.peerIsHost || (pc.peerStreamType === 'screen') || isSoloMode;
+
+        if (isFromHost) {
+            // 🎬 [메인 영화 화면 고정]: 오직 호스트가 송출하는 넷플릭스/스크린 스트림만 메인 플레이어로 설정!
+            console.log('🎬 [메인 영화 화면 수신] 호스트 스트림 재생 (streamId:', stream.id, ')');
+            if (videoPlayer.srcObject !== stream) {
+                videoPlayer.srcObject = stream;
+                applyMovieAudio(stream);
+                videoPlayer.play().catch(() => {});
+                statusDiv.innerText = `영화 스트리밍 수신 중 🍿`;
+            }
+        } else {
+            // 📸 [화상챗 상단 고정]: 화상챗(내/민지 웹캠) 소스는 오직 상단 camArea로만 전송!
+            // 메인 화면(videoPlayer)은 절대로 건드리지 않고 계속 유지됨!
+            console.log('📸 [화상챗 수신] 상단 게스트 화상챗으로 배치 (from:', targetUserId, ', streamId:', stream.id, ')');
+            if (remoteCam.srcObject !== stream) {
+                remoteCam.srcObject = stream;
+                remoteCam.peerUserId = targetUserId;
+                if (remoteCamBox) remoteCamBox.style.display = 'block';
+                applyAudioBooster(stream);
+                remoteCam.play().catch(() => {});
             }
         }
     };
 
     pc.onconnectionstatechange = () => {
         if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            console.warn(`Connection state with ${targetUserId}: ${pc.connectionState}`);
             delete peers[targetUserId];
             // 게스트인데 호스트와의 연결이 끊겼다면 2초 후 자동 재요청
-            if (!isHost && targetUserId === window.hostSocketId && roomId) {
+            if (!isHost && (targetUserId === window.hostSocketId || pc.peerIsHost) && roomId) {
                 setTimeout(() => {
-                    socket.emit('request-stream', roomId);
+                    socket.emit('request-stream', { roomId });
                 }, 2000);
             }
         }
@@ -651,8 +732,28 @@ window.reconnectStream = function(silent = false) {
     if (!roomId || isHost) return;
     if (!silent) showRemoteToast('🔄 맥북 호스트 화면을 다시 연결하는 중...');
     ensurePlaybackActive();
-    socket.emit('request-stream', roomId);
+    if (window.hostSocketId && peers[window.hostSocketId]) {
+        try { peers[window.hostSocketId].close(); } catch (_) {}
+        delete peers[window.hostSocketId];
+    }
+    socket.emit('request-stream', { roomId });
 };
+
+// 🔄 게스트 전용 메인 영화 화면 자동 복구 감시자:
+// 중간에 새로고침하거나 일시적인 네트워크 순단으로 메인 화면이 비어있으면 2.5초마다 호스트에 재요청
+setInterval(() => {
+    if (!isHost && roomId) {
+        const hasLiveMovie = videoPlayer && 
+                             videoPlayer.srcObject && 
+                             videoPlayer.srcObject.active && 
+                             videoPlayer.srcObject.getVideoTracks &&
+                             videoPlayer.srcObject.getVideoTracks().some(t => t.readyState === 'live');
+        if (!hasLiveMovie) {
+            console.log('🔄 [자동 복구 감시자] 메인 영화 화면 없음 -> 호스트에 스트림 재요청');
+            socket.emit('request-stream', { roomId });
+        }
+    }
+}, 2500);
 
 function disableInputs() {
     hostBtn.disabled = true;

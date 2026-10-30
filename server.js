@@ -640,27 +640,64 @@ if (IS_MAC) {
 }
 
 // ====================================================
-// Socket.IO 시그널링 및 실시간 이벤트 릴레이
+// Socket.IO 시그널링 및 실시간 이벤트 릴레이 (호스트 등록 및 끊김 없는 재연결 지원)
 // ====================================================
+const roomHosts = {}; // roomId -> socket.id
+
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
     // 접속 시 현재 즐겨찾기 목록 전송
     socket.emit('favorites-updated', favoritesList);
 
-    socket.on('join-room', (roomId) => {
+    socket.on('join-room', (payload) => {
+        let roomId, isHost = false;
+        if (typeof payload === 'object' && payload !== null) {
+            roomId = payload.roomId;
+            isHost = !!payload.isHost;
+        } else {
+            roomId = payload;
+        }
+        if (!roomId) return;
+
         socket.join(roomId);
         socket.currentRoomId = roomId;
-        console.log(`User ${socket.id} joined room ${roomId}`);
-        socket.to(roomId).emit('user-connected', socket.id);
+        socket.isHost = isHost;
+
+        if (isHost) {
+            roomHosts[roomId] = socket.id;
+            console.log(`🎬 [Host Registered] Socket ${socket.id} is registered as HOST for room [${roomId}]`);
+        }
+
+        console.log(`User ${socket.id} (isHost=${isHost}) joined room ${roomId}`);
+
+        // 신규 접속자에게 현재 방 호스트 정보 즉시 응답
+        socket.emit('room-info', {
+            roomId: roomId,
+            hostId: roomHosts[roomId] || null,
+            isHost: isHost
+        });
+
+        // 룸의 다른 참가자들에게 새 참가자 알림 (호스트 여부 명시)
+        socket.to(roomId).emit('user-connected', {
+            userId: socket.id,
+            isHost: isHost
+        });
     });
 
-    // 민지가 재접속하거나 화면 재연결 버튼을 누를 때 호스트에게 즉시 새 WebRTC Offer 요청
-    socket.on('request-stream', (roomId) => {
-        const targetRoom = roomId || socket.currentRoomId;
+    // 화면 스트림 재요청 (게스트가 재접속/새로고침 시 호스트에게 직접 Offer 전송 유도)
+    socket.on('request-stream', (payload) => {
+        const targetRoom = (typeof payload === 'object' && payload !== null) ? payload.roomId : (payload || socket.currentRoomId);
         if (targetRoom) {
             console.log(`Stream re-requested by ${socket.id} in room ${targetRoom}`);
-            socket.to(targetRoom).emit('user-connected', socket.id);
+            const hostId = roomHosts[targetRoom];
+            if (hostId && hostId !== socket.id && io.sockets.sockets.get(hostId)) {
+                console.log(`🎯 Directing stream re-request to HOST ${hostId}`);
+                io.to(hostId).emit('user-connected', { userId: socket.id, isHost: false });
+            } else {
+                // 호스트 ID가 없거나 모를 경우 방 전체에 브로드캐스트
+                socket.to(targetRoom).emit('user-connected', { userId: socket.id, isHost: false });
+            }
         }
     });
 
@@ -721,6 +758,15 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
+        const rId = socket.currentRoomId;
+        if (rId) {
+            socket.to(rId).emit('user-disconnected', socket.id);
+            if (roomHosts[rId] === socket.id) {
+                console.log(`⚠️ Host ${socket.id} disconnected from room ${rId}`);
+                delete roomHosts[rId];
+                socket.to(rId).emit('host-disconnected', { roomId: rId });
+            }
+        }
     });
 });
 
