@@ -32,9 +32,12 @@ app.use(express.static('public'));
 
 // 기본 즐겨찾기 / 주크박스 목록
 const DEFAULT_FAVORITES = [
+    { id: 'kbs-joy-live', title: 'KBS Joy 실시간', icon: '💛', platform: 'KBS', url: 'https://onair.kbs.co.kr/index.html?sname=onair&stype=live&ch_code=N94' },
+    { id: 'mbc-every1-live', title: 'MBC 에브리원 실시간', icon: '💙', platform: 'MBC', url: 'https://onair.imbc.com/Every1' },
+    { id: 'wavve-live', title: '웨이브 실시간 (KBS/MBC/SBS)', icon: '🌊', platform: 'WAVVE', url: 'https://www.wavve.com/live' },
+    { id: 'tving-live', title: '티빙 실시간 TV (tvN/JTBC)', icon: '📺', platform: 'TVING', url: 'https://www.tving.com/live' },
     { id: 'tving-home', title: '티빙 홈', icon: '💗', platform: 'TVING', url: 'https://www.tving.com' },
     { id: 'netflix-home', title: '넷플릭스 홈', icon: '🔴', platform: 'NETFLIX', url: 'https://www.netflix.com/browse' },
-    { id: 'tving-live', title: '티빙 실시간 TV', icon: '📺', platform: 'TVING', url: 'https://www.tving.com/live' },
     { id: 'tving-series', title: '티빙 인기 예능·시리즈', icon: '🔥', platform: 'TVING', url: 'https://www.tving.com/series' },
     { id: 'netflix-top10', title: '넷플릭스 TOP 10 신작', icon: '🏆', platform: 'NETFLIX', url: 'https://www.netflix.com/latest' },
     { id: 'netflix-series', title: '넷플릭스 시리즈·드라마', icon: '🍿', platform: 'NETFLIX', url: 'https://www.netflix.com/browse/genre/83' },
@@ -177,7 +180,7 @@ tell application "Google Chrome"
         set tIdx to 1
         repeat with t in tabs of w
             set u to URL of t
-            if (u contains "tving.com") or (u contains "netflix.com") or (u contains "coupangplay.com") or (u contains "wavve.com") or (u contains "disneyplus.com") or (u contains "watcha.com") or (u contains "youtube.com/watch") or (u contains "youtube.com/results") or (u = "https://www.youtube.com/") then
+            if (u contains "tving.com") or (u contains "netflix.com") or (u contains "coupangplay.com") or (u contains "wavve.com") or (u contains "kbs.co.kr") or (u contains "imbc.com") or (u contains "disneyplus.com") or (u contains "watcha.com") or (u contains "youtube.com/watch") or (u contains "youtube.com/results") or (u = "https://www.youtube.com/") then
                 set foundWin to w
                 set foundTabIdx to tIdx
                 set foundTab to t
@@ -341,6 +344,9 @@ async function executeMacCommand(cmd) {
                 let icon = '⭐';
                 if (info.url.includes('tving.com')) { platform = 'TVING'; icon = '💗'; }
                 else if (info.url.includes('netflix.com')) { platform = 'NETFLIX'; icon = '🔴'; }
+                else if (info.url.includes('kbs.co.kr')) { platform = 'KBS'; icon = '💛'; }
+                else if (info.url.includes('imbc.com')) { platform = 'MBC'; icon = '💙'; }
+                else if (info.url.includes('wavve.com')) { platform = 'WAVVE'; icon = '🌊'; }
                 else if (info.url.includes('coupangplay.com')) { platform = 'COUPANG'; icon = '💙'; }
                 else if (info.url.includes('youtube.com')) { platform = 'YOUTUBE'; icon = '▶️'; }
 

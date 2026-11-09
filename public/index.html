@@ -316,6 +316,9 @@
         .r-btn .material-symbols-rounded { font-size: 20px; }
         .r-btn.accent-tving { background: rgba(255, 21, 60, 0.22); border-color: rgba(255, 21, 60, 0.45); }
         .r-btn.accent-netflix { background: rgba(229, 9, 20, 0.22); border-color: rgba(229, 9, 20, 0.45); }
+        .r-btn.accent-kbs { background: rgba(255, 193, 7, 0.22); border-color: rgba(255, 193, 7, 0.5); }
+        .r-btn.accent-mbc { background: rgba(0, 168, 255, 0.22); border-color: rgba(0, 168, 255, 0.5); }
+        .r-btn.accent-wavve { background: rgba(26, 115, 232, 0.22); border-color: rgba(26, 115, 232, 0.5); }
 
         /* 검색 바 */
         .search-row {
@@ -539,6 +542,19 @@
                     <span style="color:#FF6B8B; font-weight:600;">화면 직접 터치·위아래 스와이프 지원</span>
                 </div>
                 <div class="remote-grid">
+                    <button class="r-btn accent-kbs" onclick="sendRemoteUrl('https://onair.kbs.co.kr/index.html?sname=onair&stype=live&ch_code=N94', 'KBS Joy 온에어 이동')">
+                        <span>💛 KBS Joy</span>
+                    </button>
+                    <button class="r-btn accent-mbc" onclick="sendRemoteUrl('https://onair.imbc.com/Every1', 'MBC 에브리원 온에어 이동')">
+                        <span>💙 MBC에브리원</span>
+                    </button>
+                    <button class="r-btn accent-wavve" onclick="sendRemoteUrl('https://www.wavve.com/live', '웨이브 실시간TV 이동')">
+                        <span>🌊 웨이브LIVE</span>
+                    </button>
+                    <button class="r-btn accent-tving" onclick="sendRemoteUrl('https://www.tving.com/live', '티빙 실시간TV 이동')">
+                        <span>📺 티빙LIVE</span>
+                    </button>
+
                     <button class="r-btn accent-tving" onclick="sendRemoteUrl('https://www.tving.com', '티빙 홈 이동')">
                         <span>💗 티빙 홈</span>
                     </button>

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "kbs-joy-live",
+    "title": "KBS Joy 실시간",
+    "icon": "💛",
+    "platform": "KBS",
+    "url": "https://onair.kbs.co.kr/index.html?sname=onair&stype=live&ch_code=N94"
+  },
+  {
+    "id": "mbc-every1-live",
+    "title": "MBC 에브리원 실시간",
+    "icon": "💙",
+    "platform": "MBC",
+    "url": "https://onair.imbc.com/Every1"
+  },
+  {
+    "id": "wavve-live",
+    "title": "웨이브 실시간 (KBS/MBC/SBS)",
+    "icon": "🌊",
+    "platform": "WAVVE",
+    "url": "https://www.wavve.com/live"
+  },
+  {
+    "id": "tving-live",
+    "title": "티빙 실시간 TV (tvN/JTBC)",
+    "icon": "📺",
+    "platform": "TVING",
+    "url": "https://www.tving.com/live"
+  },
+  {
+    "id": "tving-home",
+    "title": "티빙 홈",
+    "icon": "💗",
+    "platform": "TVING",
+    "url": "https://www.tving.com"
+  },
+  {
+    "id": "netflix-home",
+    "title": "넷플릭스 홈",
+    "icon": "🔴",
+    "platform": "NETFLIX",
+    "url": "https://www.netflix.com/browse"
+  },
+  {
+    "id": "tving-series",
+    "title": "티빙 인기 예능·시리즈",
+    "icon": "🔥",
+    "platform": "TVING",
+    "url": "https://www.tving.com/series"
+  },
+  {
+    "id": "netflix-top10",
+    "title": "넷플릭스 TOP 10 신작",
+    "icon": "🏆",
+    "platform": "NETFLIX",
+    "url": "https://www.netflix.com/latest"
+  },
+  {
+    "id": "netflix-series",
+    "title": "넷플릭스 시리즈·드라마",
+    "icon": "🍿",
+    "platform": "NETFLIX",
+    "url": "https://www.netflix.com/browse/genre/83"
+  },
+  {
+    "id": "netflix-movies",
+    "title": "넷플릭스 영화",
+    "icon": "🎬",
+    "platform": "NETFLIX",
+    "url": "https://www.netflix.com/browse/genre/34399"
+  },
+  {
+    "id": "coupang-home",
+    "title": "쿠팡플레이",
+    "icon": "💙",
+    "platform": "COUPANG",
+    "url": "https://www.coupangplay.com"
+  },
+  {
+    "id": "youtube-home",
+    "title": "유튜브 홈",
+    "icon": "▶️",
+    "platform": "YOUTUBE",
+    "url": "https://www.youtube.com"
+  }
+]
