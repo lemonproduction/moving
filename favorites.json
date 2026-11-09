@@ -1,14 +1,21 @@
 [
   {
+    "id": "netflix-contract-marriage",
+    "title": "넷플릭스 [계약결혼]",
+    "icon": "💍",
+    "platform": "NETFLIX",
+    "url": "https://www.netflix.com/search?q=%EA%B3%84%EC%95%BD%EA%B2%B0%ED%98%BC"
+  },
+  {
     "id": "kbs-joy-live",
-    "title": "KBS Joy 실시간",
+    "title": "KBS Joy 실시간 (계약결혼 22:30)",
     "icon": "💛",
     "platform": "KBS",
     "url": "https://onair.kbs.co.kr/index.html?sname=onair&stype=live&ch_code=N94"
   },
   {
     "id": "mbc-every1-live",
-    "title": "MBC 에브리원 실시간",
+    "title": "MBC 에브리원 실시간 (계약결혼 22:30)",
     "icon": "💙",
     "platform": "MBC",
     "url": "https://onair.imbc.com/Every1"
