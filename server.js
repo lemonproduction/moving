@@ -100,17 +100,24 @@ if (IS_MAC) {
         });
     }
 
-    // 2. 외출 중 맥북 화면 꺼짐 / 잠자기 모드 완벽 방지
-    try {
-        const caff = spawn('/usr/bin/caffeinate', ['-di', '-w', String(process.pid)], {
-            stdio: 'ignore',
-            detached: true
-        });
-        caff.unref();
-        console.log('☕ caffeinate 활성화 완료: 외출 중에도 맥북이 절전 모드로 들어가지 않습니다.');
-    } catch (e) {
-        console.error('caffeinate error:', e.message);
+    // 2. 외출 중 맥북 화면 꺼짐 / 잠자기 모드 완벽 방지 (디스플레이, 유휴, 디스크, AC, 사용자 활동 완전 보장)
+    function startCaffeinate() {
+        try {
+            const caff = spawn('/usr/bin/caffeinate', ['-dimsu', '-w', String(process.pid)], {
+                stdio: 'ignore',
+                detached: true
+            });
+            caff.unref();
+            caff.on('exit', () => {
+                console.warn('caffeinate exited, restarting...');
+                setTimeout(startCaffeinate, 1000);
+            });
+            console.log('☕ caffeinate (-dimsu) 활성화 완료: 3~4시간 이상 장시간 시청 중에도 맥북이 절대 절전 모드로 들어가지 않습니다.');
+        } catch (e) {
+            console.error('caffeinate error:', e.message);
+        }
     }
+    startCaffeinate();
 
     // 3. minji.memorypassport.kr 전용 Cloudflare 터널이 안 켜져 있으면 자동 실행
     execFile('/usr/bin/pgrep', ['-f', 'config_memorypassport.yml'], (err, stdout) => {

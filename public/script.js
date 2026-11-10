@@ -309,6 +309,18 @@ async function updateIceConfiguration() {
 }
 updateIceConfiguration();
 
+// 3~4시간 장시간 시청 시 Metered TURN 임시 인증 토큰 만료 방지 (20분 주기 자동 갱신)
+setInterval(() => {
+    updateIceConfiguration();
+}, 20 * 60 * 1000);
+
+// iOS Safari / 모바일 화면 꺼짐 방지 주기적 점검 (30초 주기)
+setInterval(() => {
+    if (roomId && (!screenWakeLock || screenWakeLock.released)) {
+        requestScreenWakeLock();
+    }
+}, 30000);
+
 // 1. 방 만들기 (맥북 호스트)
 hostBtn.addEventListener('click', async () => {
     await updateIceConfiguration();
@@ -748,14 +760,48 @@ function createPeerConnection(targetUserId, peerIsHost = false, peerStreamType =
         }
     };
 
+    let iceRecoveryTimer = null;
+    pc.oniceconnectionstatechange = () => {
+        const ice = pc.iceConnectionState;
+        console.log(`📡 [ICE 상태] ${targetUserId}: ${ice}`);
+        if (ice === 'disconnected') {
+            // 모바일 LTE/기지국 변경에 따른 일시적 단절 - 4초 대기 후 회복 안 되면 자동 복구
+            if (iceRecoveryTimer) clearTimeout(iceRecoveryTimer);
+            iceRecoveryTimer = setTimeout(() => {
+                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+                    console.warn('⚠️ [ICE 단절 지속] 4초간 회복 불가 -> 스트림 자동 치유 실행');
+                    try { pc.close(); } catch (_) {}
+                    delete peers[targetUserId];
+                    if (!isHost && (targetUserId === window.hostSocketId || pc.peerIsHost) && roomId) {
+                        window.reconnectStream(true);
+                    }
+                }
+            }, 4000);
+        } else if (ice === 'connected' || ice === 'completed') {
+            if (iceRecoveryTimer) {
+                clearTimeout(iceRecoveryTimer);
+                iceRecoveryTimer = null;
+            }
+        } else if (ice === 'failed') {
+            if (iceRecoveryTimer) clearTimeout(iceRecoveryTimer);
+            console.warn('⚠️ [ICE 연결 실패] -> 즉시 스트림 자동 치유 실행');
+            try { pc.close(); } catch (_) {}
+            delete peers[targetUserId];
+            if (!isHost && (targetUserId === window.hostSocketId || pc.peerIsHost) && roomId) {
+                window.reconnectStream(true);
+            }
+        }
+    };
+
     pc.onconnectionstatechange = () => {
         if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
             console.warn(`Connection state with ${targetUserId}: ${pc.connectionState}`);
+            try { pc.close(); } catch (_) {}
             delete peers[targetUserId];
             // 게스트인데 호스트와의 연결이 끊겼다면 2초 후 자동 재요청
             if (!isHost && (targetUserId === window.hostSocketId || pc.peerIsHost) && roomId) {
                 setTimeout(() => {
-                    socket.emit('request-stream', { roomId });
+                    window.reconnectStream(true);
                 }, 2000);
             }
         }
@@ -782,10 +828,12 @@ function createPeerConnection(targetUserId, peerIsHost = false, peerStreamType =
     return pc;
 }
 
-window.reconnectStream = function(silent = false) {
+window.reconnectStream = async function(silent = false) {
     if (!roomId || isHost) return;
     if (!silent) showRemoteToast('🔄 맥북 호스트 화면을 다시 연결하는 중...');
     ensurePlaybackActive();
+    // 3~4시간 경과 후 TURN 인증 만료 방지를 위해 최신 ICE 서버 설정 재동기화
+    await updateIceConfiguration();
     if (window.hostSocketId && peers[window.hostSocketId]) {
         try { peers[window.hostSocketId].close(); } catch (_) {}
         delete peers[window.hostSocketId];
@@ -793,9 +841,13 @@ window.reconnectStream = function(silent = false) {
     socket.emit('request-stream', { roomId });
 };
 
-// 🔄 게스트 전용 메인 영화 화면 자동 복구 감시자:
-// 중간에 새로고침하거나 일시적인 네트워크 순단으로 메인 화면이 비어있으면 호스트에 재요청 (루프 방지 8초 디바운스 적용)
+// 🔄 게스트 전용 메인 영화 화면 및 3~4시간 장시간 시청 자동 복구 감시자:
+// 1) 중간 새로고침/네트워크 단절 시 8초 쿨다운 재요청
+// 2) 3~4시간 연속 시청 중 영상 프레임 멈춤(Decoder Stall / Packet drop) 감지 시 자동 재연결
 let lastWatchdogRequestTime = 0;
+let lastVideoCurrentTime = -1;
+let videoFreezeCount = 0;
+
 setInterval(() => {
     if (!isHost && roomId) {
         const hasLiveMovie = videoPlayer && 
@@ -809,6 +861,28 @@ setInterval(() => {
             console.log('▶️ [자동 복구 감시자] 영상 스트림 수신됨(일시정지 상태) -> 재생 재개');
             ensurePlaybackActive();
             return;
+        }
+
+        // 3~4시간 장시간 시청 중 프레임 멈춤(Freezing) 감시:
+        // 재생 중인데도 currentTime이 10초 이상 전혀 증가하지 않으면 스트림 동결로 판단하여 자동 치유
+        if (hasLiveMovie && !videoPlayer.paused && document.visibilityState === 'visible') {
+            const currentT = videoPlayer.currentTime;
+            if (currentT === lastVideoCurrentTime && currentT > 0) {
+                videoFreezeCount += 1;
+                if (videoFreezeCount >= 2) { // 5초 간격 * 2회 = 10초 이상 프레임 고정
+                    console.warn('⚠️ [장시간 시청 영상 멈춤 감지] 10초간 프레임 전진 없음 -> 자동 스트림 재연결 실행');
+                    videoFreezeCount = 0;
+                    lastVideoCurrentTime = -1;
+                    window.reconnectStream(true);
+                    return;
+                }
+            } else {
+                lastVideoCurrentTime = currentT;
+                videoFreezeCount = 0;
+            }
+        } else {
+            videoFreezeCount = 0;
+            lastVideoCurrentTime = -1;
         }
 
         if (!hasLiveMovie) {
@@ -827,7 +901,7 @@ setInterval(() => {
             if (now - lastWatchdogRequestTime > 8000) {
                 lastWatchdogRequestTime = now;
                 console.log('🔄 [자동 복구 감시자] 메인 영화 화면 없음 -> 호스트에 스트림 재요청 (8초 쿨다운)');
-                socket.emit('request-stream', { roomId });
+                window.reconnectStream(true);
             }
         }
     }
