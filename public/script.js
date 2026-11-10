@@ -116,13 +116,40 @@ function keepHostTabAwake() {
     }
 }
 
+// 3~4시간 연속 시청 시 모바일 기기 화면 꺼짐/절전 모드 방지 (Screen Wake Lock API)
+let screenWakeLock = null;
+async function requestScreenWakeLock() {
+    try {
+        if ('wakeLock' in navigator && (!screenWakeLock || screenWakeLock.released)) {
+            screenWakeLock = await navigator.wakeLock.request('screen');
+            screenWakeLock.addEventListener('release', () => {
+                screenWakeLock = null;
+                console.log('💤 [Wake Lock] 화면 켜짐 유지 해제됨');
+            });
+            console.log('🔋 [Wake Lock] 화면 켜짐 유지(절전 방지) 활성화 완료');
+        }
+    } catch (e) {
+        // Wake Lock API 미지원 브라우저는 무시
+    }
+}
+
 // 화면 터치 시 Safari AudioContext & 비디오 자동 활성화 보장
 function ensurePlaybackActive() {
+    requestScreenWakeLock();
     if (window.remoteAudioCtx && window.remoteAudioCtx.state === 'suspended') {
-        window.remoteAudioCtx.resume();
+        window.remoteAudioCtx.resume().catch(() => {});
     }
-    if (!isHost && videoPlayer && videoPlayer.srcObject && videoPlayer.paused) {
-        videoPlayer.play().catch(() => {});
+    if (!isHost && videoPlayer && videoPlayer.srcObject) {
+        if (videoPlayer.muted) {
+            videoPlayer.muted = false;
+        }
+        if (videoPlayer.paused) {
+            videoPlayer.play().catch(err => {
+                console.warn('Playback play failed, fallback to muted:', err);
+                videoPlayer.muted = true;
+                videoPlayer.play().catch(() => {});
+            });
+        }
     }
 }
 document.addEventListener('touchstart', ensurePlaybackActive, { passive: true });
@@ -131,8 +158,13 @@ document.addEventListener('click', ensurePlaybackActive);
 // 모바일에서 카톡 등 다른 앱을 보다가 돌아왔을 때 자동 재생 복구 및 끊김 시 재연결
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && !isHost && roomId) {
+        requestScreenWakeLock();
         ensurePlaybackActive();
-        const hasActiveStream = videoPlayer.srcObject && videoPlayer.srcObject.active;
+        const hasActiveStream = videoPlayer && 
+                               videoPlayer.srcObject && 
+                               videoPlayer.srcObject.active &&
+                               videoPlayer.srcObject.getVideoTracks &&
+                               videoPlayer.srcObject.getVideoTracks().some(t => t.readyState === 'live');
         if (!hasActiveStream) {
             window.reconnectStream(true);
         }
@@ -494,9 +526,21 @@ socket.on('user-connected', async (incoming) => {
 
     statusDiv.innerText = peerIsHost ? `맥북 호스트와 연결 중...` : `새로운 참가자가 입장했습니다! 연결 중...`;
 
-    // 기존에 남아있던 연결이 있으면 정리 후 새 연결 생성
+    // 기존 연결 검사: 이미 연결되었거나 현재 협상 중인 연결이면 불필요한 파괴/재생성 방지 (루프 방지)
     if (peers[userId]) {
-        try { peers[userId].close(); } catch (_) {}
+        const existing = peers[userId];
+        const state = existing.connectionState || existing.iceConnectionState;
+        const age = Date.now() - (existing._createdAt || 0);
+
+        if (state === 'connected') {
+            console.log(`[user-connected] 피어 ${userId} 이미 연결됨. 기존 연결 유지.`);
+            return;
+        }
+        if ((state === 'connecting' || state === 'checking' || state === 'new') && age < 8000) {
+            console.log(`[user-connected] 피어 ${userId} 연결 협상 진행 중(${state}, ${age}ms). 기존 연결 유지.`);
+            return;
+        }
+        try { existing.close(); } catch (_) {}
         delete peers[userId];
     }
     
@@ -638,6 +682,7 @@ async function optimizeVideoSender(sender) {
 
 function createPeerConnection(targetUserId, peerIsHost = false, peerStreamType = null) {
     const pc = new RTCPeerConnection(configuration);
+    pc._createdAt = Date.now();
     peers[targetUserId] = pc;
     pc.peerIsHost = peerIsHost || (targetUserId === window.hostSocketId);
     pc.peerStreamType = peerStreamType;
@@ -677,8 +722,17 @@ function createPeerConnection(targetUserId, peerIsHost = false, peerStreamType =
             if (videoPlayer.srcObject !== stream) {
                 videoPlayer.srcObject = stream;
                 applyMovieAudio(stream);
-                videoPlayer.play().catch(() => {});
+                const playPromise = videoPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => {
+                        console.warn('Autoplay blocked, muting video to enable playback:', err);
+                        videoPlayer.muted = true;
+                        videoPlayer.play().catch(e => console.error('Even muted play failed:', e));
+                        showRemoteToast('🔊 화면을 한번 터치하면 소리가 켜집니다!');
+                    });
+                }
                 statusDiv.innerText = `영화 스트리밍 수신 중 🍿`;
+                requestScreenWakeLock();
             }
         } else {
             // 📸 [화상챗 상단 고정]: 화상챗(내/민지 웹캠) 소스는 오직 상단 camArea로만 전송!
@@ -740,7 +794,8 @@ window.reconnectStream = function(silent = false) {
 };
 
 // 🔄 게스트 전용 메인 영화 화면 자동 복구 감시자:
-// 중간에 새로고침하거나 일시적인 네트워크 순단으로 메인 화면이 비어있으면 2.5초마다 호스트에 재요청
+// 중간에 새로고침하거나 일시적인 네트워크 순단으로 메인 화면이 비어있으면 호스트에 재요청 (루프 방지 8초 디바운스 적용)
+let lastWatchdogRequestTime = 0;
 setInterval(() => {
     if (!isHost && roomId) {
         const hasLiveMovie = videoPlayer && 
@@ -748,12 +803,35 @@ setInterval(() => {
                              videoPlayer.srcObject.active && 
                              videoPlayer.srcObject.getVideoTracks &&
                              videoPlayer.srcObject.getVideoTracks().some(t => t.readyState === 'live');
+        
+        // 만약 비디오 스트림은 이미 수신되었으나 일시정지 상태라면 재생만 재개
+        if (hasLiveMovie && videoPlayer.paused) {
+            console.log('▶️ [자동 복구 감시자] 영상 스트림 수신됨(일시정지 상태) -> 재생 재개');
+            ensurePlaybackActive();
+            return;
+        }
+
         if (!hasLiveMovie) {
-            console.log('🔄 [자동 복구 감시자] 메인 영화 화면 없음 -> 호스트에 스트림 재요청');
-            socket.emit('request-stream', { roomId });
+            // 현재 호스트와의 WebRTC 연결이 연결 협상 중(connecting, checking)인지 확인하여 대기
+            const hostPc = window.hostSocketId ? peers[window.hostSocketId] : null;
+            if (hostPc) {
+                const state = hostPc.connectionState || hostPc.iceConnectionState;
+                const age = Date.now() - (hostPc._createdAt || 0);
+                if ((state === 'connecting' || state === 'checking' || state === 'new') && age < 8000) {
+                    console.log(`⏳ [자동 복구 감시자] 호스트와 WebRTC 협상 진행 중(${state}, ${age}ms) -> 대기`);
+                    return;
+                }
+            }
+
+            const now = Date.now();
+            if (now - lastWatchdogRequestTime > 8000) {
+                lastWatchdogRequestTime = now;
+                console.log('🔄 [자동 복구 감시자] 메인 영화 화면 없음 -> 호스트에 스트림 재요청 (8초 쿨다운)');
+                socket.emit('request-stream', { roomId });
+            }
         }
     }
-}, 2500);
+}, 5000);
 
 function disableInputs() {
     hostBtn.disabled = true;

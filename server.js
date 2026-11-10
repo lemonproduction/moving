@@ -7,7 +7,10 @@ const { execFile, spawn } = require('child_process');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
-    cors: { origin: '*', methods: ['GET', 'POST'] }
+    cors: { origin: '*', methods: ['GET', 'POST'] },
+    pingInterval: 10000,
+    pingTimeout: 15000,
+    maxHttpBufferSize: 1e7
 });
 
 const IS_MAC = process.platform === 'darwin';
@@ -708,10 +711,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('offer', (payload) => {
+        console.log(`[Relay Offer] ${socket.id} -> ${payload.target} (isHost: ${payload.isHost}, type: ${payload.streamType})`);
         io.to(payload.target).emit('offer', payload);
     });
 
     socket.on('answer', (payload) => {
+        console.log(`[Relay Answer] ${socket.id} -> ${payload.target} (isHost: ${payload.isHost})`);
         io.to(payload.target).emit('answer', payload);
     });
 
