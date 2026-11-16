@@ -316,6 +316,8 @@
         .r-btn .material-symbols-rounded { font-size: 20px; }
         .r-btn.accent-tving { background: rgba(255, 21, 60, 0.22); border-color: rgba(255, 21, 60, 0.45); }
         .r-btn.accent-netflix { background: rgba(229, 9, 20, 0.22); border-color: rgba(229, 9, 20, 0.45); }
+        .r-btn.accent-disney { background: rgba(17, 60, 207, 0.28); border-color: rgba(60, 110, 255, 0.55); }
+        .r-btn.accent-youtube { background: rgba(255, 0, 0, 0.22); border-color: rgba(255, 50, 50, 0.5); }
         .r-btn.accent-kbs { background: rgba(255, 193, 7, 0.22); border-color: rgba(255, 193, 7, 0.5); }
         .r-btn.accent-mbc { background: rgba(0, 168, 255, 0.22); border-color: rgba(0, 168, 255, 0.5); }
         .r-btn.accent-wavve { background: rgba(26, 115, 232, 0.22); border-color: rgba(26, 115, 232, 0.5); }
@@ -342,8 +344,10 @@
             white-space: nowrap;
             color: #fff;
         }
-        .search-btn.tving { background: #FF153C; }
+        .search-btn.youtube { background: #CC0000; }
         .search-btn.netflix { background: #E50914; }
+        .search-btn.disney { background: #113CCF; }
+        .search-btn.tving { background: #FF153C; }
 
         /* ⭐ 즐겨찾기 주크박스 칩 목록 */
         .favorites-wrap {
@@ -555,11 +559,17 @@
                         <span>📺 티빙LIVE</span>
                     </button>
 
-                    <button class="r-btn accent-tving" onclick="sendRemoteUrl('https://www.tving.com', '티빙 홈 이동')">
-                        <span>💗 티빙 홈</span>
-                    </button>
                     <button class="r-btn accent-netflix" onclick="sendRemoteUrl('https://www.netflix.com/browse', '넷플릭스 홈 이동')">
                         <span>🔴 넷플릭스</span>
+                    </button>
+                    <button class="r-btn accent-disney" onclick="sendRemoteUrl('https://www.disneyplus.com/home', '디즈니+ 홈 이동')">
+                        <span>✨ 디즈니+</span>
+                    </button>
+                    <button class="r-btn accent-youtube" onclick="sendRemoteUrl('https://www.youtube.com', '유튜브 홈 이동')">
+                        <span>▶️ 유튜브</span>
+                    </button>
+                    <button class="r-btn accent-tving" onclick="sendRemoteUrl('https://www.tving.com', '티빙 홈 이동')">
+                        <span>💗 티빙 홈</span>
                     </button>
                     <button class="r-btn" onclick="sendRemoteNav('back')">
                         <span>🔙 뒤로가기</span>
@@ -601,11 +611,13 @@
 
             <!-- 2) 작품 바로 검색 -->
             <div>
-                <div class="remote-section-label">🔍 보고 싶은 드라마·예능·영화 바로 검색</div>
+                <div class="remote-section-label">🔍 보고 싶은 드라마·예능·영화·유튜브 바로 검색</div>
                 <div class="search-row">
-                    <input type="text" id="remoteSearchInput" placeholder="작품 제목 입력 (예: 환승연애, 흑백요리사)" onkeypress="if(event.key==='Enter') triggerRemoteSearch('tving')">
-                    <button class="search-btn tving" onclick="triggerRemoteSearch('tving')">티빙 검색</button>
-                    <button class="search-btn netflix" onclick="triggerRemoteSearch('netflix')">넷플 검색</button>
+                    <input type="text" id="remoteSearchInput" placeholder="작품 또는 영상 제목 입력 (예: 흑백요리사, 뉴진스)" onkeypress="if(event.key==='Enter') triggerRemoteSearch('youtube')">
+                    <button class="search-btn youtube" onclick="triggerRemoteSearch('youtube')">유튜브</button>
+                    <button class="search-btn netflix" onclick="triggerRemoteSearch('netflix')">넷플</button>
+                    <button class="search-btn disney" onclick="triggerRemoteSearch('disney')">디즈니+</button>
+                    <button class="search-btn tving" onclick="triggerRemoteSearch('tving')">티빙</button>
                 </div>
             </div>
 

@@ -49,6 +49,20 @@
     "url": "https://www.netflix.com/browse"
   },
   {
+    "id": "disney-home",
+    "title": "디즈니+ 홈",
+    "icon": "✨",
+    "platform": "DISNEY",
+    "url": "https://www.disneyplus.com/home"
+  },
+  {
+    "id": "disney-browse",
+    "title": "디즈니+ 영화/시리즈",
+    "icon": "🏰",
+    "platform": "DISNEY",
+    "url": "https://www.disneyplus.com/browse"
+  },
+  {
     "id": "tving-series",
     "title": "티빙 인기 예능·시리즈",
     "icon": "🔥",

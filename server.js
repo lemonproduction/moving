@@ -176,7 +176,8 @@ function getChromeExactWebRect() {
     });
 }
 
-// 크롬에서 공유 중인 미디어 탭(넷플릭스/티빙/쿠팡플레이/유튜브 등) 찾기 & 활성화 & 창 좌표 반환
+// 크롬에서 공유 중인 미디어 탭(디즈니+/넷플릭스/유튜브/티빙 등) 찾기 & 활성화 & 창 좌표 반환
+// 💡 [핵심 버그 수정]: 클릭/터치 조작 시(navigateUrl 없음) 절대 탭을 다른 서비스로 바꾸지 않고, 현재 보고 있던 활성 탭을 100% 유지!
 async function focusAndGetMediaTab(navigateUrl = null) {
     const escapedUrl = navigateUrl ? navigateUrl.replace(/\\/g, '\\\\').replace(/"/g, '\\"') : '';
     const script = `
@@ -185,50 +186,115 @@ tell application "Google Chrome"
     set foundTabIdx to 0
     set foundTab to missing value
     
-    -- 1순위: 주요 OTT/영상 사이트 탭 탐색
-    repeat with w in windows
-        set tIdx to 1
-        repeat with t in tabs of w
-            set u to URL of t
-            if (u contains "tving.com") or (u contains "netflix.com") or (u contains "coupangplay.com") or (u contains "wavve.com") or (u contains "kbs.co.kr") or (u contains "imbc.com") or (u contains "disneyplus.com") or (u contains "watcha.com") or (u contains "youtube.com/watch") or (u contains "youtube.com/results") or (u = "https://www.youtube.com/") then
-                set foundWin to w
-                set foundTabIdx to tIdx
-                set foundTab to t
-                exit repeat
-            end if
-            set tIdx to tIdx + 1
-        end repeat
-        if foundWin is not missing value then exit repeat
-    end repeat
+    set isNav to (${escapedUrl ? 'true' : 'false'})
+    set navTarget to "${escapedUrl}"
     
-    -- 2순위: 프라이빗 영화관/관리 페이지가 아닌 일반 탭 탐색
-    if foundWin is missing value then
-        repeat with w in windows
-            set tIdx to 1
-            repeat with t in tabs of w
-                set u to URL of t
-                if (u does not contain "memorypassport.kr") and (u does not contain "catchballstock.com") and (u does not contain "trycloudflare.com") and (u does not contain "localhost:3000") and (u does not contain "127.0.0.1:3000") and (u does not contain "render.com") and (u does not contain "github.com") and (u does not contain "studio.youtube.com") then
+    -- [1단계: 클릭/터치/키 조작 시 (navigateUrl 없음)]
+    -- 절대 탭을 바꾸지 않고, 현재 호스트가 보고 있는(공유 중인) 바로 그 활성 탭을 유지!
+    if not isNav then
+        -- 1. 가장 앞쪽 창(front window)의 현재 활성 탭(active tab) 우선 확인
+        if (count of windows) > 0 then
+            set fw to front window
+            set curTab to active tab of fw
+            set curUrl to URL of curTab
+            if (curUrl does not contain "memorypassport.kr") and (curUrl does not contain "localhost:3000") and (curUrl does not contain "127.0.0.1:3000") and (curUrl does not contain "chrome://") then
+                set foundWin to fw
+                set foundTabIdx to active tab index of fw
+                set foundTab to curTab
+            end if
+        end if
+        
+        -- 2. 만약 앞쪽 창이 아니라면 다른 창들의 '활성 탭(active tab)'만 검사 (비활성 탭으로 임의 전환 금지)
+        if foundWin is missing value then
+            repeat with w in windows
+                set curTab to active tab of w
+                set curUrl to URL of curTab
+                if (curUrl contains "disneyplus.com") or (curUrl contains "netflix.com") or (curUrl contains "youtube.com") or (curUrl contains "tving.com") or (curUrl contains "coupangplay.com") or (curUrl contains "wavve.com") or (curUrl contains "kbs.co.kr") or (curUrl contains "imbc.com") or (curUrl contains "watcha.com") then
                     set foundWin to w
-                    set foundTabIdx to tIdx
-                    set foundTab to t
+                    set foundTabIdx to active tab index of w
+                    set foundTab to curTab
                     exit repeat
                 end if
-                set tIdx to tIdx + 1
             end repeat
-            if foundWin is not missing value then exit repeat
-        end repeat
+        end if
+        
+        -- 3. 그래도 없으면 열려있는 탭 중 미디어 탭 탐색
+        if foundWin is missing value then
+            repeat with w in windows
+                set tIdx to 1
+                repeat with t in tabs of w
+                    set u to URL of t
+                    if (u contains "disneyplus.com") or (u contains "netflix.com") or (u contains "youtube.com") or (u contains "tving.com") or (u contains "coupangplay.com") or (u contains "wavve.com") or (u contains "kbs.co.kr") or (u contains "imbc.com") or (u contains "watcha.com") then
+                        set foundWin to w
+                        set foundTabIdx to tIdx
+                        set foundTab to t
+                        exit repeat
+                    end if
+                    set tIdx to tIdx + 1
+                end repeat
+                if foundWin is not missing value then exit repeat
+            end repeat
+        end if
+    else
+        -- [2단계: 명시적 URL 이동 요청 시 (navigateUrl 있음)]
+        -- 타겟 도메인과 일치하는 기존 탭이 있으면 그 탭을 재활용, 없으면 현재 활성 탭 이동
+        set targetDomain to ""
+        if navTarget contains "disneyplus.com" then
+            set targetDomain to "disneyplus.com"
+        else if navTarget contains "netflix.com" then
+            set targetDomain to "netflix.com"
+        else if navTarget contains "youtube.com" then
+            set targetDomain to "youtube.com"
+        else if navTarget contains "tving.com" then
+            set targetDomain to "tving.com"
+        else if navTarget contains "coupangplay.com" then
+            set targetDomain to "coupangplay.com"
+        else if navTarget contains "wavve.com" then
+            set targetDomain to "wavve.com"
+        end if
+        
+        if targetDomain is not "" then
+            repeat with w in windows
+                set tIdx to 1
+                repeat with t in tabs of w
+                    if (URL of t) contains targetDomain then
+                        set foundWin to w
+                        set foundTabIdx to tIdx
+                        set foundTab to t
+                        exit repeat
+                    end if
+                    set tIdx to tIdx + 1
+                end repeat
+                if foundWin is not missing value then exit repeat
+            end repeat
+        end if
+        
+        -- 해당 도메인 탭이 없으면 현재 앞쪽 창의 활성 탭에서 이동
+        if foundWin is missing value and (count of windows) > 0 then
+            set fw to front window
+            set curTab to active tab of fw
+            set curUrl to URL of curTab
+            if (curUrl does not contain "memorypassport.kr") and (curUrl does not contain "localhost:3000") and (curUrl does not contain "127.0.0.1:3000") then
+                set foundWin to fw
+                set foundTabIdx to active tab index of fw
+                set foundTab to curTab
+            end if
+        end if
     end if
     
     if foundWin is not missing value then
         if active tab index of foundWin is not foundTabIdx then
             set active tab index of foundWin to foundTabIdx
         end if
-        ${escapedUrl ? `set URL of foundTab to "${escapedUrl}"` : ''}
+        if isNav then
+            set URL of foundTab to navTarget
+        end if
         set index of foundWin to 1
         activate
         set b to bounds of foundWin
         return (item 1 of b as string) & "|" & (item 2 of b as string) & "|" & (item 3 of b as string) & "|" & (item 4 of b as string) & "|" & (title of foundTab) & "|" & (URL of foundTab)
     end if
+    return "NOT_FOUND"
 end tell
 `;
     const out = await runAppleScript(script);
@@ -337,11 +403,13 @@ async function executeMacCommand(cmd) {
 
         if (cmd.action === 'search' && cmd.query) {
             const q = encodeURIComponent(cmd.query.trim());
-            let targetUrl = `https://www.tving.com/search?keyword=${q}`;
+            let targetUrl = `https://www.youtube.com/results?search_query=${q}`;
             if (cmd.platform === 'netflix') {
                 targetUrl = `https://www.netflix.com/search?q=${q}`;
-            } else if (cmd.platform === 'youtube') {
-                targetUrl = `https://www.youtube.com/results?search_query=${q}`;
+            } else if (cmd.platform === 'disney') {
+                targetUrl = `https://www.disneyplus.com/search?q=${q}`;
+            } else if (cmd.platform === 'tving') {
+                targetUrl = `https://www.tving.com/search?keyword=${q}`;
             }
             await focusAndGetMediaTab(targetUrl);
             return;
@@ -354,6 +422,7 @@ async function executeMacCommand(cmd) {
                 let icon = '⭐';
                 if (info.url.includes('tving.com')) { platform = 'TVING'; icon = '💗'; }
                 else if (info.url.includes('netflix.com')) { platform = 'NETFLIX'; icon = '🔴'; }
+                else if (info.url.includes('disneyplus.com')) { platform = 'DISNEY'; icon = '✨'; }
                 else if (info.url.includes('kbs.co.kr')) { platform = 'KBS'; icon = '💛'; }
                 else if (info.url.includes('imbc.com')) { platform = 'MBC'; icon = '💙'; }
                 else if (info.url.includes('wavve.com')) { platform = 'WAVVE'; icon = '🌊'; }
@@ -701,14 +770,15 @@ io.on('connection', (socket) => {
         });
     });
 
-    // 화면 스트림 재요청 (게스트가 재접속/새로고침 시 호스트에게 직접 Offer 전송 유도)
+    // 화면 스트림 재요청 (게스트가 재접속/새로고침/화면 단절 시 호스트에게 직접 Offer 전송 유도)
     socket.on('request-stream', (payload) => {
         const targetRoom = (typeof payload === 'object' && payload !== null) ? payload.roomId : (payload || socket.currentRoomId);
         if (targetRoom) {
             console.log(`Stream re-requested by ${socket.id} in room ${targetRoom}`);
             const hostId = roomHosts[targetRoom];
             if (hostId && hostId !== socket.id && io.sockets.sockets.get(hostId)) {
-                console.log(`🎯 Directing stream re-request to HOST ${hostId}`);
+                console.log(`🎯 Directing stream-request & user-connected to HOST ${hostId}`);
+                io.to(hostId).emit('stream-request', { userId: socket.id });
                 io.to(hostId).emit('user-connected', { userId: socket.id, isHost: false });
             } else {
                 // 호스트 ID가 없거나 모를 경우 방 전체에 브로드캐스트

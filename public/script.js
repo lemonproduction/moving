@@ -334,8 +334,8 @@ hostBtn.addEventListener('click', async () => {
             video: { 
                 cursor: "always", 
                 frameRate: { ideal: 30, max: 30 },
-                width: { ideal: 1280, max: 1280 },
-                height: { ideal: 720, max: 720 }
+                width: { ideal: 1920, max: 1920 },
+                height: { ideal: 1080, max: 1080 }
             },
             audio: {
                 autoGainControl: false,
@@ -534,6 +534,13 @@ socket.on('user-connected', async (incoming) => {
 
     if (peerIsHost) {
         window.hostSocketId = userId;
+        // 💡 [WebRTC Glare 충돌 방지] 게스트는 호스트에게 Offer를 생성하지 않고, 호스트에게 스트림 전송 유도
+        if (!isHost) {
+            console.log('👑 [호스트 접속 확인] 호스트로부터의 화면 Offer 수신 대기 (재요청 발행)');
+            statusDiv.innerText = '맥북 호스트와 연결 중...';
+            socket.emit('request-stream', { roomId });
+            return;
+        }
     }
 
     statusDiv.innerText = peerIsHost ? `맥북 호스트와 연결 중...` : `새로운 참가자가 입장했습니다! 연결 중...`;
@@ -573,6 +580,37 @@ socket.on('user-connected', async (incoming) => {
         sdp: pc.localDescription,
         isHost: isHost,
         streamType: isHost ? 'screen' : (webcamStream ? 'webcam' : 'none')
+    });
+});
+
+// 🎯 [호스트 전용]: 게스트가 화면을 재요청했을 때 기존 연결 상태와 무관하게 즉시 신규 Offer 강제 발행!
+socket.on('stream-request', async (payload) => {
+    const userId = (typeof payload === 'object' && payload !== null) ? payload.userId : payload;
+    if (!isHost || !userId || userId === socket.id) return;
+    console.log(`🎯 [스트림 명시적 재요청 수신] 게스트 ${userId}에게 신규 Offer 즉시 발행`);
+
+    if (peers[userId]) {
+        try { peers[userId].close(); } catch (_) {}
+        delete peers[userId];
+    }
+
+    const pc = createPeerConnection(userId, false);
+    const rawOffer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+    });
+    const tunedOffer = new RTCSessionDescription({
+        type: rawOffer.type,
+        sdp: tuneOpusAudioSDP(rawOffer.sdp)
+    });
+    await pc.setLocalDescription(tunedOffer);
+
+    socket.emit('offer', {
+        target: userId,
+        caller: socket.id,
+        sdp: pc.localDescription,
+        isHost: true,
+        streamType: 'screen'
     });
 });
 
@@ -679,14 +717,14 @@ async function optimizeVideoSender(sender) {
         if (!params.encodings || params.encodings.length === 0) {
             params.encodings = [{}];
         }
-        // 1.5 Mbps 상한선 (720p/480p 고화질 유지하면서 TCP 버퍼 폭주 방지)
-        params.encodings[0].maxBitrate = 1500000;
+        // 3.5 Mbps 상한선 (Full HD 1080p 및 유튜브/넷플릭스 초고화질 보장)
+        params.encodings[0].maxBitrate = 3500000;
         params.encodings[0].maxFramerate = 30;
-        // 네트워크 지연 시 프레임을 드랍하지 않고 해상도를 부드럽게 조정하여 끊김 없애기
-        params.degradationPreference = 'maintain-framerate';
+        // 해상도와 프레임레이트를 균형 있게 유지 (화질 뭉개짐/저하 방지)
+        params.degradationPreference = 'balanced';
         
         await sender.setParameters(params);
-        console.log('🚀 [WebRTC 최적화] 전송 비트레이트 1.5Mbps 및 maintain-framerate 적용');
+        console.log('🚀 [WebRTC 최적화] 전송 비트레이트 3.5Mbps(1080p 고화질) 및 balanced 적용');
     } catch (e) {
         console.warn('Sender parameters 최적화 생략(협상 진행 중):', e.message);
     }
@@ -1185,9 +1223,15 @@ window.triggerRemoteSearch = function(platform) {
     const input = document.getElementById('remoteSearchInput');
     const query = input ? input.value.trim() : '';
     if (!query) {
-        return alert('검색할 드라마, 예능, 영화 제목을 입력해주세요!');
+        return alert('검색할 영상 또는 작품 제목을 입력해주세요!');
     }
-    const pName = platform === 'netflix' ? '넷플릭스' : '티빙';
+    const pNames = {
+        youtube: '유튜브',
+        netflix: '넷플릭스',
+        disney: '디즈니+',
+        tving: '티빙'
+    };
+    const pName = pNames[platform] || '콘텐츠';
     showRemoteToast(`🔍 ${pName}에서 [${query}] 검색 중...`, 2800);
     dispatchRemoteControl({ action: 'search', platform, query });
 };
