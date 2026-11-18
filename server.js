@@ -134,6 +134,13 @@ if (IS_MAC) {
             }
         }
     });
+
+    // 4. 시청 중 맥북 백그라운드 스로틀링(App Nap / Chrome Throttling) 방지 상시 활동 갱신
+    setInterval(() => {
+        if (roomHosts['movie-room'] && io.sockets.adapter.rooms.get('movie-room')?.size > 1) {
+            execFile('/usr/bin/caffeinate', ['-u', '-t', '2'], () => {});
+        }
+    }, 30000);
 }
 
 function runAppleScript(script) {
