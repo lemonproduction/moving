@@ -897,12 +897,10 @@ window.reconnectStream = async function(silent = false) {
     socket.emit('request-stream', { roomId });
 };
 
-// 🔄 게스트 전용 메인 영화 화면 및 3~4시간 장시간 시청 자동 복구 감시자:
+// 🔄 게스트 전용 메인 영화 화면 자동 복구 감시자:
 // 1) 중간 새로고침/네트워크 단절 시 8초 쿨다운 재요청
-// 2) 3~4시간 연속 시청 중 영상 프레임 멈춤(Decoder Stall / Packet drop) 감지 시 자동 재연결
+// 💡 [핵심 버그 수정]: 정지 화면(일시정지 상태)을 스트림 고장으로 오인하여 10초마다 연결을 강제 파괴하던 거짓 감지 루프 완전 제거!
 let lastWatchdogRequestTime = 0;
-let lastVideoCurrentTime = -1;
-let videoFreezeCount = 0;
 
 setInterval(() => {
     if (!isHost && roomId) {
@@ -912,33 +910,11 @@ setInterval(() => {
                              videoPlayer.srcObject.getVideoTracks &&
                              videoPlayer.srcObject.getVideoTracks().some(t => t.readyState === 'live');
         
-        // 만약 비디오 스트림은 이미 수신되었으나 일시정지 상태라면 재생만 재개
+        // 만약 비디오 스트림은 이미 수신되었으나 플레이어가 일시정지 상태라면 재생만 재개
         if (hasLiveMovie && videoPlayer.paused) {
-            console.log('▶️ [자동 복구 감시자] 영상 스트림 수신됨(일시정지 상태) -> 재생 재개');
+            console.log('▶️ [자동 복구 감시자] 영상 스트림 수신됨(플레이어 일시정지 상태) -> 재생 재개');
             ensurePlaybackActive();
             return;
-        }
-
-        // 3~4시간 장시간 시청 중 프레임 멈춤(Freezing) 감시:
-        // 재생 중인데도 currentTime이 10초 이상 전혀 증가하지 않으면 스트림 동결로 판단하여 자동 치유
-        if (hasLiveMovie && !videoPlayer.paused && document.visibilityState === 'visible') {
-            const currentT = videoPlayer.currentTime;
-            if (currentT === lastVideoCurrentTime && currentT > 0) {
-                videoFreezeCount += 1;
-                if (videoFreezeCount >= 2) { // 5초 간격 * 2회 = 10초 이상 프레임 고정
-                    console.warn('⚠️ [장시간 시청 영상 멈춤 감지] 10초간 프레임 전진 없음 -> 자동 스트림 재연결 실행');
-                    videoFreezeCount = 0;
-                    lastVideoCurrentTime = -1;
-                    window.reconnectStream(true);
-                    return;
-                }
-            } else {
-                lastVideoCurrentTime = currentT;
-                videoFreezeCount = 0;
-            }
-        } else {
-            videoFreezeCount = 0;
-            lastVideoCurrentTime = -1;
         }
 
         if (!hasLiveMovie) {
